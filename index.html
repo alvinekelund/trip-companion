@@ -540,6 +540,85 @@ const EMERGENCY = {
 };
 
 /* =========================================================================
+   BOOKINGS — flights + car rental (from Gmail)
+   ========================================================================= */
+const BOOKINGS = {
+  flights: [
+    {
+      legCity: 'hk', // destination city — this flight delivers Alvin to this city
+      date: '2026-04-21', from: { code: 'KIX', name: 'Kansai Intl', terminal: 'T2', time: '08:15' },
+      to:   { code: 'HKG', name: 'Hong Kong Intl', terminal: 'T1', time: '11:40' },
+      airline: 'Peach Aviation', flightNo: 'MM063', aircraft: 'Airbus A321', cabin: 'Economy',
+      pnr: 'UYTDBQ', ref: 'Trip.com 1433810619883779',
+      baggage: '1 personal + 1 carry-on, 7 kg combined · NO checked baggage',
+      passengers: 'Alvin Erik Ekelund + Anna Houstecka',
+      meals: 'No meals',
+    },
+    {
+      legCity: 'seoul',
+      date: '2026-04-24', from: { code: 'HKG', name: 'Hong Kong Intl', terminal: 'T1', time: '16:55' },
+      to:   { code: 'ICN', name: 'Incheon Intl', terminal: 'T1', time: '21:35' },
+      airline: 'HK Express', flightNo: 'UO626', aircraft: 'Airbus A321neo', cabin: 'Economy',
+      pnr: 'BY1Q2Q',
+    },
+    {
+      legCity: 'beijing',
+      date: '2026-04-28', from: { code: 'ICN', name: 'Incheon Intl', terminal: 'T2', time: '12:50' },
+      to:   { code: 'PEK', name: 'Beijing Capital', terminal: 'T3', time: '14:00' },
+      airline: 'Asiana Airlines', flightNo: 'OZ333', cabin: 'Economy',
+      pnr: '7GCY84',
+    },
+    {
+      legCity: 'pvg', // connection, not a leg city
+      date: '2026-05-04', from: { code: 'PEK', name: 'Beijing Capital', terminal: 'T2', time: '19:30' },
+      to:   { code: 'PVG', name: 'Shanghai Pudong', terminal: 'T1', time: '21:55' },
+      airline: 'China Eastern', flightNo: 'MU5164', cabin: 'Economy',
+      pnr: 'PVEK63', note: 'Connection — same ticket as MU779',
+    },
+    {
+      legCity: 'nz',
+      date: '2026-05-05', from: { code: 'PVG', name: 'Shanghai Pudong', terminal: 'T1', time: '00:05' },
+      to:   { code: 'AKL', name: 'Auckland', terminal: '', time: '15:45' },
+      airline: 'China Eastern', flightNo: 'MU779', cabin: 'Economy',
+      pnr: 'PVEK63', note: 'Red-eye — departs just after midnight on May 5',
+    },
+    {
+      legCity: 'mel', // outbound connection, not in itinerary
+      date: '2026-05-11', from: { code: 'WLG', name: 'Wellington', terminal: '', time: '06:00' },
+      to:   { code: 'MEL', name: 'Melbourne', terminal: 'T2', time: '08:10' },
+      airline: 'Air New Zealand', flightNo: 'NZ253', cabin: 'Economy',
+      pnr: 'W5PBSH',
+    },
+    {
+      legCity: 'sin',
+      date: '2026-05-11', from: { code: 'MEL', name: 'Melbourne', terminal: 'T2', time: '13:00' },
+      to:   { code: 'SIN', name: 'Singapore Changi', terminal: 'T1', time: '19:05' },
+      airline: 'Scoot', flightNo: 'TR059', cabin: 'Economy',
+      pnr: 'H8FSVC',
+    },
+  ],
+  car: {
+    supplier: 'Mode Car Rentals (via DiscoverCars)',
+    bookingRef: 'D013488692',
+    supplierConf: 'U-169719',
+    pickup:  { date: '2026-05-05', time: '17:00', location: 'Auckland Airport', address: '110 Montgomerie Road, Mangere', phone: '+64 9 373 3925' },
+    dropoff: { date: '2026-05-10', time: '17:00', location: 'Wellington Airport', address: '25 Shelly Bay Road, Maupuia' },
+    vehicle: 'Compact · Toyota Yaris or comparable · automatic',
+    paidOnline: '233.58 NZD',
+    dueAtPickup: '~460 NZD',
+    deposit: '600 NZD (hold, refunded)',
+    coverage: 'Full coverage included',
+  },
+};
+
+// Expose incoming flight to each leg for the timeline (by leg id)
+BOOKINGS.flights.forEach(f => {
+  const leg = ITINERARY.find(l => l.id === f.legCity);
+  if (leg) leg.inboundFlight = f;
+});
+// Osaka has no inbound flight in this dataset — leave undefined
+
+/* =========================================================================
    APP STATE
    ========================================================================= */
 let state = {
@@ -557,6 +636,7 @@ let state = {
 };
 
 const TABS = [
+  { id: 'bookings',  label: 'Bookings',    icon: 'ticket' },
   { id: 'cities',    label: 'Cities',      icon: 'map-pin' },
   { id: 'phrases',   label: 'Phrases',     icon: 'message-circle' },
   { id: 'currency',  label: 'Currency',    icon: 'coins' },
@@ -605,6 +685,8 @@ function renderTimeline() {
   $('#timelineStrip').innerHTML = ITINERARY.map((l, i) => {
     const isCurrent = i === idx;
     const isPast = i < idx;
+    const f = l.inboundFlight;
+    const flightChip = f ? `<div class="text-[9.5px] muted mt-1 font-mono truncate">✈ ${f.flightNo} · ${f.to.time}</div>` : '';
     return `
       <div class="flex-shrink-0 rounded-2xl p-3 border min-w-[135px] ${isCurrent ? 'ring-2 ring-offset-2' : ''}"
         style="border-color:var(--line); background:${isCurrent ? l.tint+'14' : 'var(--surface)'}; ${isCurrent?'--tw-ring-color:'+l.tint:''}; opacity:${isPast?0.55:1};">
@@ -612,6 +694,7 @@ function renderTimeline() {
         <div class="font-semibold text-sm mt-0.5">${l.name}</div>
         <div class="text-[10px] muted mt-1">${fmtDate(l.arrive)} – ${fmtDate(l.depart)}</div>
         <div class="text-[10px] mt-0.5" style="color:${l.tint}; font-weight:600;">${l.nights} nights${isCurrent?' · now':''}</div>
+        ${flightChip}
       </div>
     `;
   }).join('');
@@ -963,6 +1046,154 @@ function renderJournal() {
   `;
 }
 
+function renderBookings() {
+  // Discrepancy check: actual nights implied by flights vs configured
+  const implied = {
+    osaka:   { actual: 4, note: 'Osaka: Apr 17 → Apr 21 (matches)' },
+    hk:      { actual: 3, note: 'Hong Kong: Apr 21 → Apr 24 (matches)' },
+    seoul:   { actual: 4, note: 'Seoul: Apr 24 21:35 → Apr 28 12:50 → 4 nights' },
+    beijing: { actual: 6, note: 'Beijing: Apr 28 → May 4 → 6 nights (matches)' },
+    nz:      { actual: 6, note: 'NZ: May 5 15:45 → May 11 06:00 → 6 nights' },
+  };
+  const mismatches = ITINERARY.filter(l => implied[l.id] && implied[l.id].actual !== l.nights);
+
+  const warning = mismatches.length ? `
+    <div class="card p-4 fade-in" style="background: linear-gradient(135deg, #fef3c715, #f59e0b15); border-left: 4px solid #f59e0b;">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style="background:#f59e0b25;">
+          <i data-lucide="alert-triangle" class="w-4 h-4" style="color:#b45309"></i>
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-sm mb-1">Heads up — Timeline vs flights mismatch</div>
+          <div class="text-[12.5px] muted leading-relaxed mb-2">
+            Your <b>Seoul</b> and <b>NZ</b> stays in the Timeline don't match these flight dates — want me to sync them?
+          </div>
+          <ul class="text-[12px] space-y-0.5 muted">
+            ${mismatches.map(l => `<li>• <b class="ink">${l.flag} ${l.name}</b>: timeline says ${l.nights} nights · flights imply ${implied[l.id].actual} nights</li>`).join('')}
+          </ul>
+          <div class="text-[11px] muted mt-2 italic">Tell me "sync timeline to bookings" and I'll update the itinerary.</div>
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  const flightCard = (f, i) => `
+    <div class="card p-4 fade-in">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background: linear-gradient(135deg,#3b82f620,#8b5cf620);">
+            <i data-lucide="plane" class="w-4 h-4" style="color:#6366f1"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="font-display text-lg font-bold tracking-tight">
+              ${f.from.code} <span class="muted font-normal mx-1">→</span> ${f.to.code}
+            </div>
+            <div class="text-[11px] muted">${fmtDateLong(new Date(f.date+'T00:00:00'))}</div>
+          </div>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <div class="chip" style="font-weight:600;">${f.airline}</div>
+          <div class="text-[11px] muted mt-1 font-mono">${f.flightNo}</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center mb-3">
+        <div>
+          <div class="font-display text-xl font-bold tabular-nums">${f.from.time}</div>
+          <div class="text-[11px] font-semibold mt-0.5">${f.from.code} ${f.from.terminal || ''}</div>
+          <div class="text-[11px] muted">${f.from.name}</div>
+        </div>
+        <div class="text-center px-2">
+          <i data-lucide="arrow-right" class="w-4 h-4 muted mx-auto"></i>
+        </div>
+        <div class="text-right">
+          <div class="font-display text-xl font-bold tabular-nums">${f.to.time}</div>
+          <div class="text-[11px] font-semibold mt-0.5">${f.to.code} ${f.to.terminal || ''}</div>
+          <div class="text-[11px] muted">${f.to.name}</div>
+        </div>
+      </div>
+
+      <div class="border-t line pt-2.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[11.5px]">
+        <div><span class="muted uppercase tracking-wider text-[10px] font-bold">PNR</span> <span class="font-mono font-semibold">${f.pnr}</span></div>
+        ${f.aircraft ? `<div><span class="muted uppercase tracking-wider text-[10px] font-bold">Aircraft</span> ${f.aircraft}</div>` : ''}
+        ${f.cabin ? `<div><span class="muted uppercase tracking-wider text-[10px] font-bold">Cabin</span> ${f.cabin}</div>` : ''}
+        ${f.ref ? `<div class="col-span-2"><span class="muted uppercase tracking-wider text-[10px] font-bold">Ref</span> <span class="font-mono text-[11px]">${f.ref}</span></div>` : ''}
+        ${f.baggage ? `<div class="col-span-2 mt-1 rounded-lg px-2 py-1.5" style="background:#fef3c730; border:1px dashed #f59e0b60;"><span class="uppercase tracking-wider text-[10px] font-bold" style="color:#b45309;">⚠ Baggage</span> ${f.baggage}</div>` : ''}
+        ${f.meals ? `<div class="col-span-2"><span class="muted uppercase tracking-wider text-[10px] font-bold">Meals</span> ${f.meals}</div>` : ''}
+        ${f.passengers ? `<div class="col-span-2"><span class="muted uppercase tracking-wider text-[10px] font-bold">Passengers</span> ${f.passengers}</div>` : ''}
+        ${f.note ? `<div class="col-span-2 muted italic">${f.note}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  const car = BOOKINGS.car;
+  const carCard = `
+    <div class="card p-4 fade-in" style="border-left: 4px solid #10b981;">
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style="background:#10b98120;">
+          <i data-lucide="car" class="w-4 h-4" style="color:#059669"></i>
+        </div>
+        <div class="leading-tight">
+          <div class="font-display text-lg font-bold tracking-tight">New Zealand · Rental Car</div>
+          <div class="text-[11px] muted">${car.supplier}</div>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-3 mb-3">
+        <div class="rounded-xl p-3" style="background:#10b98110;">
+          <div class="text-[10px] uppercase tracking-wider font-bold" style="color:#059669;">Pickup</div>
+          <div class="font-semibold text-sm mt-0.5">${fmtDate(new Date(car.pickup.date+'T00:00:00'))} · ${car.pickup.time}</div>
+          <div class="text-[12px] mt-1">${car.pickup.location}</div>
+          <div class="text-[11px] muted">${car.pickup.address}</div>
+          <a href="tel:${car.pickup.phone.replace(/\s/g,'')}" class="text-[11px] mt-1 inline-flex items-center gap-1" style="color:#059669;"><i data-lucide="phone" class="w-3 h-3"></i> ${car.pickup.phone}</a>
+        </div>
+        <div class="rounded-xl p-3" style="background:#10b98110;">
+          <div class="text-[10px] uppercase tracking-wider font-bold" style="color:#059669;">Drop-off</div>
+          <div class="font-semibold text-sm mt-0.5">${fmtDate(new Date(car.dropoff.date+'T00:00:00'))} · ${car.dropoff.time}</div>
+          <div class="text-[12px] mt-1">${car.dropoff.location}</div>
+          <div class="text-[11px] muted">${car.dropoff.address}</div>
+        </div>
+      </div>
+
+      <div class="border-t line pt-2.5 space-y-1 text-[11.5px]">
+        <div><span class="muted uppercase tracking-wider text-[10px] font-bold">Vehicle</span> ${car.vehicle}</div>
+        <div><span class="muted uppercase tracking-wider text-[10px] font-bold">Booking</span> <span class="font-mono">${car.bookingRef}</span> · supplier ref <span class="font-mono">${car.supplierConf}</span></div>
+        <div><span class="muted uppercase tracking-wider text-[10px] font-bold">Coverage</span> ${car.coverage}</div>
+        <div class="grid grid-cols-3 gap-2 mt-2">
+          <div class="rounded-lg p-2 text-center" style="background:#10b98110;">
+            <div class="text-[10px] muted uppercase tracking-wider">Paid</div>
+            <div class="font-semibold text-[13px] tabular-nums">${car.paidOnline}</div>
+          </div>
+          <div class="rounded-lg p-2 text-center" style="background:#f59e0b10;">
+            <div class="text-[10px] muted uppercase tracking-wider">At pickup</div>
+            <div class="font-semibold text-[13px] tabular-nums">${car.dueAtPickup}</div>
+          </div>
+          <div class="rounded-lg p-2 text-center" style="background:#64748b10;">
+            <div class="text-[10px] muted uppercase tracking-wider">Hold</div>
+            <div class="font-semibold text-[13px] tabular-nums">${car.deposit}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return `
+    <div class="space-y-4">
+      ${warning}
+      <div class="flex items-center gap-2">
+        <i data-lucide="plane" class="w-4 h-4 muted"></i>
+        <div class="text-[11px] uppercase tracking-wider muted font-bold">Flights · ${BOOKINGS.flights.length} segments</div>
+      </div>
+      ${BOOKINGS.flights.map(flightCard).join('')}
+      <div class="flex items-center gap-2 pt-2">
+        <i data-lucide="car" class="w-4 h-4 muted"></i>
+        <div class="text-[11px] uppercase tracking-wider muted font-bold">Ground transport</div>
+      </div>
+      ${carCard}
+    </div>
+  `;
+}
+
 function renderGuide() {
   const hasKey = !!state.apiKey;
   return `
@@ -1030,6 +1261,7 @@ function renderContent() {
   else if (tab === 'weather')   html = renderWeather();
   else if (tab === 'journal')   html = renderJournal();
   else if (tab === 'guide')     html = renderGuide();
+  else if (tab === 'bookings')  html = renderBookings();
   c.innerHTML = html;
   c.classList.remove('fade-in'); void c.offsetWidth; c.classList.add('fade-in');
   bindContent();
