@@ -198,9 +198,9 @@ function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
 const ITINERARY = [
   { id: 'osaka',    name: 'Osaka',    country: 'Japan',       flag: '🇯🇵', nights: 4, tint: '#ef4444', tintSoft:'#fee2e2' },
   { id: 'hk',       name: 'Hong Kong',country: 'Hong Kong',   flag: '🇭🇰', nights: 3, tint: '#f59e0b', tintSoft:'#fef3c7' },
-  { id: 'seoul',    name: 'Seoul',    country: 'South Korea', flag: '🇰🇷', nights: 5, tint: '#3b82f6', tintSoft:'#dbeafe' },
+  { id: 'seoul',    name: 'Seoul',    country: 'South Korea', flag: '🇰🇷', nights: 4, tint: '#3b82f6', tintSoft:'#dbeafe' },
   { id: 'beijing',  name: 'Beijing',  country: 'China',       flag: '🇨🇳', nights: 6, tint: '#dc2626', tintSoft:'#fee2e2' },
-  { id: 'nz',       name: 'New Zealand', country: 'NZ',       flag: '🇳🇿', nights: 7, tint: '#10b981', tintSoft:'#d1fae5' },
+  { id: 'nz',       name: 'New Zealand', country: 'NZ',       flag: '🇳🇿', nights: 6, tint: '#10b981', tintSoft:'#d1fae5' },
 ];
 
 // Compute start & end dates. Osaka started earlier but we only have "4 nights remaining" — so depart = TODAY + 4
@@ -1047,36 +1047,6 @@ function renderJournal() {
 }
 
 function renderBookings() {
-  // Discrepancy check: actual nights implied by flights vs configured
-  const implied = {
-    osaka:   { actual: 4, note: 'Osaka: Apr 17 → Apr 21 (matches)' },
-    hk:      { actual: 3, note: 'Hong Kong: Apr 21 → Apr 24 (matches)' },
-    seoul:   { actual: 4, note: 'Seoul: Apr 24 21:35 → Apr 28 12:50 → 4 nights' },
-    beijing: { actual: 6, note: 'Beijing: Apr 28 → May 4 → 6 nights (matches)' },
-    nz:      { actual: 6, note: 'NZ: May 5 15:45 → May 11 06:00 → 6 nights' },
-  };
-  const mismatches = ITINERARY.filter(l => implied[l.id] && implied[l.id].actual !== l.nights);
-
-  const warning = mismatches.length ? `
-    <div class="card p-4 fade-in" style="background: linear-gradient(135deg, #fef3c715, #f59e0b15); border-left: 4px solid #f59e0b;">
-      <div class="flex items-start gap-3">
-        <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style="background:#f59e0b25;">
-          <i data-lucide="alert-triangle" class="w-4 h-4" style="color:#b45309"></i>
-        </div>
-        <div class="flex-1">
-          <div class="font-semibold text-sm mb-1">Heads up — Timeline vs flights mismatch</div>
-          <div class="text-[12.5px] muted leading-relaxed mb-2">
-            Your <b>Seoul</b> and <b>NZ</b> stays in the Timeline don't match these flight dates — want me to sync them?
-          </div>
-          <ul class="text-[12px] space-y-0.5 muted">
-            ${mismatches.map(l => `<li>• <b class="ink">${l.flag} ${l.name}</b>: timeline says ${l.nights} nights · flights imply ${implied[l.id].actual} nights</li>`).join('')}
-          </ul>
-          <div class="text-[11px] muted mt-2 italic">Tell me "sync timeline to bookings" and I'll update the itinerary.</div>
-        </div>
-      </div>
-    </div>
-  ` : '';
-
   const flightCard = (f, i) => `
     <div class="card p-4 fade-in">
       <div class="flex items-start justify-between gap-3 mb-3">
@@ -1179,7 +1149,6 @@ function renderBookings() {
 
   return `
     <div class="space-y-4">
-      ${warning}
       <div class="flex items-center gap-2">
         <i data-lucide="plane" class="w-4 h-4 muted"></i>
         <div class="text-[11px] uppercase tracking-wider muted font-bold">Flights · ${BOOKINGS.flights.length} segments</div>
