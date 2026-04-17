@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Alvin's Trip Companion</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          display: ['Fraunces', 'Georgia', 'serif']
+        }
+      }
+    }
+  }
+</script>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --ink: #1c1917;
+    --muted: #78716c;
+    --line: #e7e5e4;
+    --accent: #ea580c;
+  }
+  .dark {
+    --bg: #0c0a09;
+    --surface: #1c1917;
+    --ink: #fafaf9;
+    --muted: #a8a29e;
+    --line: #292524;
+    --accent: #fb923c;
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .surface { background: var(--surface); border-color: var(--line); }
+  .ink { color: var(--ink); }
+  .muted { color: var(--muted); }
+  .line { border-color: var(--line); }
+  .font-display { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 20px -12px rgba(0,0,0,.08);
+  }
+  .dark .card { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -16px rgba(0,0,0,.6); }
+
+  .chip { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .6rem; border-radius: 999px; font-size: .72rem; font-weight: 500; border: 1px solid var(--line); background: var(--surface); }
+
+  .tab-btn {
+    flex: 0 0 auto; padding: .55rem .9rem; border-radius: 999px; font-size: .8rem; font-weight: 500;
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    white-space: nowrap; transition: all .15s ease;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .progress-track { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6); border-radius: 999px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+
+  /* Phrase flip card */
+  .flip { perspective: 1000px; }
+  .flip-inner { position: relative; width: 100%; height: 100%; transition: transform .5s; transform-style: preserve-3d; }
+  .flip.flipped .flip-inner { transform: rotateY(180deg); }
+  .flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 1rem; border-radius: 18px; }
+  .flip-back { transform: rotateY(180deg); }
+
+  /* Bingo */
+  .bingo-cell { aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: .7rem; font-weight: 500; padding: .35rem; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; line-height: 1.15; transition: all .18s ease; user-select: none; }
+  .bingo-cell:hover { transform: translateY(-1px); }
+  .bingo-cell.marked { background: linear-gradient(135deg, #f97316, #ec4899); color: white; border-color: transparent; transform: scale(.97); box-shadow: 0 8px 20px -8px rgba(236,72,153,.5); }
+  .bingo-cell.marked::after { content: '✓'; position: absolute; }
+
+  /* Chat */
+  .bubble { max-width: 85%; padding: .65rem .9rem; border-radius: 16px; font-size: .88rem; line-height: 1.45; }
+  .bubble.user { background: var(--ink); color: var(--bg); border-bottom-right-radius: 4px; align-self: flex-end; }
+  .bubble.bot { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .typing span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); margin: 0 1px; animation: bounce 1.2s infinite ease-in-out; }
+  .typing span:nth-child(2) { animation-delay: .15s; }
+  .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: scale(.6); opacity: .4; } 40% { transform: scale(1); opacity: 1; } }
+
+  /* Pulse for "you are here" */
+  .dot-pulse { position: relative; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; }
+  .dot-pulse::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: #22c55e; animation: pulse 1.8s ease-out infinite; }
+  @keyframes pulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(3); opacity: 0; } }
+
+  /* Scrollbar polish */
+  ::-webkit-scrollbar { height: 6px; width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
+
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { scrollbar-width: none; }
+
+  /* Modal */
+  .modal-backdrop { background: rgba(0,0,0,.45); backdrop-filter: blur(6px); }
+
+  /* Subtle fade in */
+  .fade-in { animation: fadeIn .4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  textarea, input { background: transparent; color: var(--ink); }
+  textarea:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- HEADER -->
+<header class="sticky top-0 z-40 backdrop-blur-md border-b line" style="background: color-mix(in srgb, var(--bg) 85%, transparent);">
+  <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-lg" style="background: linear-gradient(135deg,#f97316,#ec4899,#8b5cf6);">✈️</div>
+      <div class="leading-tight">
+        <div class="font-display text-[17px] font-bold tracking-tight">Trip Companion</div>
+        <div class="text-[11px] muted">Alvin · Osaka → NZ</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button id="darkBtn" class="w-9 h-9 rounded-full flex items-center justify-center border line hover:scale-105 transition surface" aria-label="Toggle theme"><i data-lucide="moon" class="w-4 h-4"></i></button>
+      <button id="settingsBtn" class="w-9 h-9 rounded-full flex items-center justify-center border line hover:scale-105 transition surface" aria-label="Settings"><i data-lucide="settings" class="w-4 h-4"></i></button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 pb-24 pt-5 space-y-5">
+
+<!-- TIMELINE -->
+<section class="card p-5 fade-in">
+  <div class="flex items-center justify-between mb-3">
+    <div>
+      <div class="text-[11px] uppercase tracking-wider muted font-semibold">Right now</div>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="dot-pulse"></span>
+        <span id="currentCity" class="font-display text-2xl font-bold"></span>
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="text-[11px] uppercase tracking-wider muted font-semibold">Next up</div>
+      <div id="nextCountdown" class="font-semibold text-sm mt-1"></div>
+    </div>
+  </div>
+  <div class="progress-track mb-2"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+  <div id="tripStats" class="text-xs muted flex justify-between"></div>
+  <div id="timelineStrip" class="mt-4 flex gap-2 overflow-x-auto hide-scrollbar -mx-1 px-1"></div>
+</section>
+
+<!-- TABS -->
+<nav id="tabs" class="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-1"></nav>
+
+<!-- SECTIONS -->
+<section id="content" class="space-y-5"></section>
+
+<footer class="text-center text-[11px] muted pt-6 pb-4">
+  Made with care · Travel safe, Alvin · <span id="todayFooter"></span>
+</footer>
+</main>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop">
+  <div class="card p-5 w-full max-w-sm fade-in">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-display text-lg font-bold">Settings</h3>
+      <button id="closeSettings" class="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10"><i data-lucide="x" class="w-4 h-4"></i></button>
+    </div>
+    <label class="text-xs font-semibold uppercase tracking-wider muted">Anthropic API key</label>
+    <input id="apiKeyInput" type="password" placeholder="sk-ant-..." class="w-full mt-1.5 px-3 py-2.5 rounded-xl border line text-sm font-mono" autocomplete="off" />
+    <p class="text-[11px] muted mt-2 leading-relaxed">Your key stays in this tab only, never saved. Refresh and it's gone. Used only to call Claude directly from your browser.</p>
+    <div class="flex gap-2 mt-4">
+      <button id="clearKey" class="flex-1 py-2 rounded-xl border line text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10">Clear</button>
+      <button id="saveKey" class="flex-1 py-2 rounded-xl text-sm font-semibold text-white" style="background: linear-gradient(135deg,#f97316,#ec4899);">Save</button>
+    </div>
+    <div id="keyStatus" class="text-[11px] mt-3 text-center muted"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   DATA — dates, cities, phrases, etc.
+   ========================================================================= */
+const TODAY = new Date('2026-04-17T00:00:00');
+
+function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+function fmtDate(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+function fmtDateLong(d) { return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
+function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
+
+const ITINERARY = [
+  { id: 'osaka',    name: 'Osaka',    country: 'Japan',       flag: '🇯🇵', nights: 4, tint: '#ef4444', tintSoft:'#fee2e2' },
+  { id: 'hk',       name: 'Hong Kong',country: 'Hong Kong',   flag: '🇭🇰', nights: 5, tint: '#f59e0b', tintSoft:'#fef3c7' },
+  { id: 'seoul',    name: 'Seoul',    country: 'South Korea', flag: '🇰🇷', nights: 5, tint: '#3b82f6', tintSoft:'#dbeafe' },
+  { id: 'beijing',  name: 'Beijing',  country: 'China',       flag: '🇨🇳', nights: 6, tint: '#dc2626', tintSoft:'#fee2e2' },
+  { id: 'nz',       name: 'New Zealand', country: 'NZ',       flag: '🇳🇿', nights: 7, tint: '#10b981', tintSoft:'#d1fae5' },
+];
+
+// Compute start & end dates. Osaka started earlier but we only have "4 nights remaining" — so depart = TODAY + 4
+let cursor = new Date(TODAY);
+ITINERARY.forEach((leg, i) => {
+  if (i === 0) {
+    leg.arrive = new Date('2026-04-13T00:00:00'); // assume arrived 4 days before (flavor only)
+    leg.depart = addDays(TODAY, leg.nights);
+  } else {
+    leg.arrive = new Date(cursor);
+    leg.depart = addDays(cursor, leg.nights);
+  }
+  cursor = new Date(leg.depart);
+});
+
+function currentLegIndex() {
+  for (let i = 0; i < ITINERARY.length; i++) {
+    if (TODAY < ITINERARY[i].depart) return i;
+  }
+  return ITINERARY.length - 1;
+}
+
+/* =========================================================================
+   CITY DETAILS
+   ========================================================================= */
+const CITY_DETAILS = {
+  osaka: {
+    mustEat: [
+      { dish: 'Takoyaki', where: 'Wanaka or Kukuru, Dotonbori' },
+      { dish: 'Okonomiyaki', where: 'Mizuno (Michelin Bib, Dotonbori)' },
+      { dish: 'Kushikatsu', where: 'Daruma, Shinsekai' },
+      { dish: 'Kitsune udon', where: 'Usami-tei Matsubaya (since 1893)' },
+      { dish: 'Tempura rice bowl', where: 'Tempura Daikichi, Tenma' },
+    ],
+    neighborhoods: ['Namba / Dotonbori (neon mayhem)', 'Shinsekai (retro-Showa)', 'Nakazakicho (indie cafés in old wooden houses)', 'Tenma (longest shōtengai in Japan, food streets)', 'Nakanoshima (riverside museums)'],
+    dontMiss: ['Osaka Castle park at dusk (cherry blossoms tail end)', 'Kuromon Market breakfast (go early, 8am)', 'Umeda Sky Building sunset', 'Day trip to Nara — Todai-ji & deer', 'A stand-up sushi bar in Tenma'],
+    skip: ['Universal Studios queues (unless fully committed)', 'Tsutenkaku tower interior — the tower is better from the outside', 'Dotonbori at 11pm on a Saturday if you hate crowds'],
+    offbeat: 'Nakazakicho — a single subway stop north of Umeda, old wooden row-houses turned into one-of-a-kind vintage shops and coffee stands. Feels like a different city.'
+  },
+  hk: {
+    mustEat: [
+      { dish: 'Dim sum', where: 'Lin Heung Kui or Tim Ho Wan (Sham Shui Po)' },
+      { dish: 'Roast goose', where: 'Yat Lok, Central (Michelin)' },
+      { dish: 'Clay pot rice', where: 'Kwan Kee, Sai Ying Pun (winter only — Nov-Mar, but ask)' },
+      { dish: 'Wonton noodles', where: 'Mak\'s Noodle, Central' },
+      { dish: 'Egg tart', where: 'Tai Cheong Bakery, Central' },
+      { dish: 'Cha chaan teng breakfast', where: 'Capital Café, Wan Chai' },
+    ],
+    neighborhoods: ['Sheung Wan (antique street, old HK)', 'Sham Shui Po (street food, textile markets, grit)', 'Tai Hang (quiet village alleys)', 'Kennedy Town (seaside sunsets)', 'Yau Ma Tei (Temple Street night market)'],
+    dontMiss: ['Peak Tram + Lugard Road loop (not just the viewing deck — walk it)', 'Star Ferry at night, Kowloon to Central', 'Dragon\'s Back hike (1–2 hrs, ends at Shek O beach)', 'Tram ride end-to-end on Hong Kong Island (HK$3)', 'Man Mo Temple incense coils'],
+    skip: ['Ocean Park if tight on time', 'Ladies\' Market unless you love junk', 'The Peak Tower mall (walk past it)'],
+    offbeat: 'Take the #6 bus from Central all the way to Stanley across the spine of the island — top deck front row. Cheaper and better than any tour.'
+  },
+  seoul: {
+    mustEat: [
+      { dish: 'Korean BBQ (samgyeopsal)', where: 'Geumdwaeji Sikdang, Yongsan' },
+      { dish: 'Kalguksu', where: 'Myeongdong Kyoja (iconic, chaotic)' },
+      { dish: 'Gamjatang (pork bone soup)', where: 'Anam-dong\'s old-school joints' },
+      { dish: 'Tteokbokki', where: 'Sindang-dong Tteokbokki Town' },
+      { dish: 'Naengmyeon', where: 'Pyongyang Myeonok, Jongno' },
+      { dish: 'Gimbap & late-night', where: 'Gwangjang Market stalls' },
+    ],
+    neighborhoods: ['Ikseon-dong (hanok alleys, cafés)', 'Seongsu (Brooklyn of Seoul)', 'Yeonnam-dong (indie food + slow streets)', 'Bukchon Hanok Village (quiet after 6pm)', 'Euljiro (bars in tool-shop alleys)'],
+    dontMiss: ['Changdeokgung + Secret Garden (reserve online)', 'Bukhansan hike (half day, skyline views)', 'Han River picnic with convenience-store ramyeon', 'Jjimjilbang (try Dragon Hill Spa)', 'A noraebang (private karaoke)'],
+    skip: ['Gangnam Style photo-op (it\'s just a sign)', 'Myeongdong street food (overpriced, go to Gwangjang)', 'N Seoul Tower if you\'ve seen any observation deck'],
+    offbeat: 'Sewoon Sangga — a brutalist electronics arcade slowly becoming a rooftop walkway. Weird, photogenic, very Seoul.'
+  },
+  beijing: {
+    mustEat: [
+      { dish: 'Peking duck', where: 'Siji Minfu (better than touristy Quanjude)' },
+      { dish: 'Zhajiangmian', where: 'Haiwan Ju, Dongsi' },
+      { dish: 'Jianbing', where: 'Street carts around Nanluoguxiang, mornings' },
+      { dish: 'Hotpot (Beijing style)', where: 'Nanmen Shuan Rou — lamb, brass pot' },
+      { dish: 'Baozi breakfast', where: 'Qingfeng Baozi (Xi Jinping\'s famous stop)' },
+    ],
+    neighborhoods: ['Gulou / Nanluoguxiang hutongs (rent a bike)', 'Wudaoying Hutong (quieter, indie shops)', '798 Art District (half day)', 'Sanlitun (nightlife + designer coffee)', 'Qianmen\'s side alleys (skip the main pedestrian strip)'],
+    dontMiss: ['Forbidden City — enter from north gate, exits south', 'Great Wall at Jinshanling or Mutianyu (NOT Badaling)', 'Temple of Heaven early AM with the tai chi crowd', 'Summer Palace + Kunming Lake', 'A hutong walk at dusk with a bottle of erguotou'],
+    skip: ['Badaling Great Wall (crammed)', 'Wangfujing snack street (dried scorpions = tourist theater)', 'Any "acrobatic show" scalper'],
+    offbeat: 'Liulichang — a restored Qing-era street of seal carvers, brush makers, and antique booksellers. Twenty minutes west of Tiananmen, empty by comparison.'
+  },
+  nz: {
+    mustEat: [
+      { dish: 'Flat white', where: 'Pretty much anywhere — NZ coffee is elite' },
+      { dish: 'Lamb shank / Sunday roast', where: 'A country pub on the drive' },
+      { dish: 'Fish & chips', where: 'Mt Maunganui beach or any seaside takeaway' },
+      { dish: 'Whitebait fritter (if in season)', where: 'West Coast cafés' },
+      { dish: 'Hokey pokey ice cream', where: 'Tip Top / any dairy' },
+    ],
+    neighborhoods: ['Auckland: Ponsonby, K Road, Devonport ferry', 'Rotorua detour for geothermal + Māori culture', 'Taupō lakefront', 'Napier (Art Deco, Hawke\'s Bay wine)', 'Wellington: Cuba St, Mt Victoria, Te Papa'],
+    dontMiss: ['Hobbiton if you\'ve read Tolkien once (Matamata)', 'Waitomo glowworm caves', 'Tongariro Alpine Crossing (full day, weather-dependent)', 'Wellington\'s Zealandia sanctuary', 'Interislander ferry views at least from shore'],
+    skip: ['SkyCity casino', 'Paid "kiwi spotting" tours (go to Zealandia instead)', 'Driving at night — wildlife, winding roads, don\'t'],
+    offbeat: 'The Forgotten World Highway (SH43) between Stratford and Taumarunui — a one-lane road through farmland, a self-declared republic, and a one-way tunnel. Half a day well spent.'
+  }
+};
+
+/* =========================================================================
+   PHRASES
+   ========================================================================= */
+const PHRASES = {
+  japanese: {
+    label: 'Japanese', flag: '🇯🇵', tint: '#ef4444',
+    list: [
+      { en: 'Hello', native: 'こんにちは', roman: 'Konnichiwa' },
+      { en: 'Good morning', native: 'おはようございます', roman: 'Ohayō gozaimasu' },
+      { en: 'Thank you', native: 'ありがとうございます', roman: 'Arigatō gozaimasu' },
+      { en: 'Excuse me / Sorry', native: 'すみません', roman: 'Sumimasen' },
+      { en: 'Yes / No', native: 'はい / いいえ', roman: 'Hai / Iie' },
+      { en: 'How much?', native: 'いくらですか', roman: 'Ikura desu ka?' },
+      { en: 'Water please', native: 'お水をください', roman: 'O-mizu o kudasai' },
+      { en: 'No spicy, please', native: '辛くしないでください', roman: 'Karaku shinaide kudasai' },
+      { en: 'Check please', native: 'お会計お願いします', roman: 'O-kaikei onegaishimasu' },
+      { en: 'Where is the bathroom?', native: 'トイレはどこですか', roman: 'Toire wa doko desu ka?' },
+      { en: 'I have an allergy', native: 'アレルギーがあります', roman: 'Arerugī ga arimasu' },
+      { en: 'Help!', native: '助けて', roman: 'Tasukete!' },
+      { en: 'Delicious', native: 'おいしい', roman: 'Oishii' },
+      { en: "I don't understand", native: 'わかりません', roman: 'Wakarimasen' },
+      { en: 'Goodbye', native: 'さようなら', roman: 'Sayōnara' },
+      { en: '1–10', native: '一 二 三 四 五 六 七 八 九 十', roman: 'ichi · ni · san · shi · go · roku · shichi · hachi · kyū · jū' },
+    ]
+  },
+  cantonese: {
+    label: 'Cantonese', flag: '🇭🇰', tint: '#f59e0b',
+    list: [
+      { en: 'Hello', native: '你好', roman: 'néih hóu' },
+      { en: 'Thank you (service)', native: '唔該', roman: 'm̀h gōi' },
+      { en: 'Thank you (gift)', native: '多謝', roman: 'dō jeh' },
+      { en: 'Excuse me / Sorry', native: '唔好意思', roman: 'm̀h hóu yi si' },
+      { en: 'Yes / No', native: '係 / 唔係', roman: 'haih / m̀h haih' },
+      { en: 'How much?', native: '幾錢', roman: 'géi chín?' },
+      { en: 'Water please', native: '要杯水', roman: 'yiu būi séui' },
+      { en: 'No spicy', native: '唔要辣', roman: 'm̀h yiu laaht' },
+      { en: 'Check please', native: '埋單', roman: 'màaih dāan' },
+      { en: 'Where\'s the bathroom?', native: '洗手間喺邊', roman: 'sái sáu gāan hái bīn?' },
+      { en: 'I have an allergy', native: '我敏感', roman: 'ngóh máhn gám' },
+      { en: 'Help!', native: '救命', roman: 'gau mehng!' },
+      { en: 'Delicious', native: '好食', roman: 'hóu sihk' },
+      { en: "I don't understand", native: '我唔明', roman: 'ngóh m̀h mìhng' },
+      { en: 'Bye bye', native: '拜拜', roman: 'bāai bāai' },
+      { en: '1–10', native: '一 二 三 四 五 六 七 八 九 十', roman: 'yāt · yih · sāam · sei · ńgh · luhk · chāt · baat · gáu · sahp' },
+    ]
+  },
+  korean: {
+    label: 'Korean', flag: '🇰🇷', tint: '#3b82f6',
+    list: [
+      { en: 'Hello', native: '안녕하세요', roman: 'Annyeonghaseyo' },
+      { en: 'Thank you', native: '감사합니다', roman: 'Kamsahamnida' },
+      { en: 'Excuse me / Sorry', native: '실례합니다', roman: 'Sillyehamnida' },
+      { en: 'Yes / No', native: '네 / 아니요', roman: 'Ne / Aniyo' },
+      { en: 'How much?', native: '얼마예요', roman: 'Eolmayeyo?' },
+      { en: 'Water please', native: '물 주세요', roman: 'Mul juseyo' },
+      { en: 'Not spicy, please', native: '안 맵게 해주세요', roman: 'An maepge haejuseyo' },
+      { en: 'Check please', native: '계산서 주세요', roman: 'Gyesanseo juseyo' },
+      { en: 'Where\'s the bathroom?', native: '화장실 어디예요', roman: 'Hwajangsil eodiyeyo?' },
+      { en: 'I have an allergy', native: '알레르기가 있어요', roman: 'Allereugiga isseoyo' },
+      { en: 'Help!', native: '도와주세요', roman: 'Dowajuseyo!' },
+      { en: 'Delicious', native: '맛있어요', roman: 'Masisseoyo' },
+      { en: "I don't understand", native: '잘 모르겠어요', roman: 'Jal moreugesseoyo' },
+      { en: 'Goodbye (stay well)', native: '안녕히 계세요', roman: 'Annyeonghi gyeseyo' },
+      { en: '1–10', native: '일 이 삼 사 오 육 칠 팔 구 십', roman: 'il · i · sam · sa · o · yuk · chil · pal · gu · sip' },
+    ]
+  },
+  mandarin: {
+    label: 'Mandarin', flag: '🇨🇳', tint: '#dc2626',
+    list: [
+      { en: 'Hello', native: '你好', roman: 'Nǐ hǎo' },
+      { en: 'Thank you', native: '谢谢', roman: 'Xièxie' },
+      { en: 'Excuse me / Sorry', native: '不好意思', roman: 'Bù hǎo yìsi' },
+      { en: 'Yes / No', native: '是 / 不是', roman: 'Shì / Bù shì' },
+      { en: 'How much?', native: '多少钱', roman: 'Duōshǎo qián?' },
+      { en: 'Water please', native: '请给我水', roman: 'Qǐng gěi wǒ shuǐ' },
+      { en: 'Not spicy', native: '不要辣', roman: 'Bù yào là' },
+      { en: 'Check please', native: '买单', roman: 'Mǎidān' },
+      { en: 'Where is the bathroom?', native: '洗手间在哪里', roman: 'Xǐshǒujiān zài nǎlǐ?' },
+      { en: 'I\'m allergic', native: '我过敏', roman: 'Wǒ guòmǐn' },
+      { en: 'Help!', native: '救命', roman: 'Jiùmìng!' },
+      { en: 'Delicious', native: '好吃', roman: 'Hǎochī' },
+      { en: "I don't understand", native: '我听不懂', roman: 'Wǒ tīng bù dǒng' },
+      { en: 'Goodbye', native: '再见', roman: 'Zàijiàn' },
+      { en: '1–10', native: '一 二 三 四 五 六 七 八 九 十', roman: 'yī · èr · sān · sì · wǔ · liù · qī · bā · jiǔ · shí' },
+    ]
+  },
+};
+
+/* =========================================================================
+   CURRENCY (approximate April 2026)
+   ========================================================================= */
+const CURRENCY = {
+  osaka:   { code: 'JPY', symbol: '¥',  perEur: 165,  rule: '÷ 165 → EUR (or drop the last two zeros and halve)' },
+  hk:      { code: 'HKD', symbol: 'HK$',perEur: 8.5,  rule: '÷ 8.5 → EUR (roughly divide by 9, add a bit)' },
+  seoul:   { code: 'KRW', symbol: '₩',  perEur: 1450, rule: '÷ 1450 → EUR (drop three zeros, multiply by ~0.7)' },
+  beijing: { code: 'CNY', symbol: '¥',  perEur: 7.8,  rule: '÷ 7.8 → EUR (roughly divide by 8)' },
+  nz:      { code: 'NZD', symbol: 'NZ$',perEur: 1.85, rule: '× 0.54 → EUR (roughly half)' },
+};
+
+/* =========================================================================
+   ETIQUETTE
+   ========================================================================= */
+const ETIQUETTE = {
+  osaka: {
+    tipping: 'Never. Tipping confuses people. A bow is thanks.',
+    chopsticks: 'Don\'t stick them upright in rice. Don\'t pass food chopstick-to-chopstick (funeral gesture).',
+    shoes: 'Off in ryokan, traditional restaurants (look for a step up + slippers).',
+    queues: 'Sacred. Stand left on escalators in Osaka (unlike Tokyo which stands left too — both actually, but Osaka is casual).',
+    photos: 'Geisha, shrines: ask. No photos inside most temples.',
+    water: 'Tap water is excellent.',
+    sim: 'Ubigi / Airalo eSIM works. Or pocket wifi at airport.',
+    maps: 'Google Maps works perfectly.',
+    vpn: 'Not needed.',
+    misc: 'Slurping ramen = compliment. Cash still king at small places.'
+  },
+  hk: {
+    tipping: '10% in restaurants often already added (check bill). Round up taxis.',
+    chopsticks: 'Same rules as Japan; tapping bowl = rude.',
+    shoes: 'Keep on.',
+    queues: 'Enforced. Octopus tap beats fumbling cash.',
+    photos: 'Avoid photographing police during protests (always check news).',
+    water: 'Tap water is technically potable but locals drink filtered/bottled.',
+    sim: 'eSIM with CSL, 3HK, or Airalo. Airport SIM kiosks cheap.',
+    maps: 'Google Maps works. Also Citymapper for HK.',
+    vpn: 'Not required on HK side — but mainland China rules apply if you cross.',
+    misc: 'Octopus card for everything: MTR, buses, 7-Eleven, vending machines.'
+  },
+  seoul: {
+    tipping: 'Not customary. Don\'t.',
+    chopsticks: 'Metal chopsticks + spoon. Rice is eaten with the spoon. Hold bowl on the table, not up.',
+    shoes: 'Off in homes, temples, hanok stays, some BBQ joints (watch for shoe lockers).',
+    queues: 'Orderly. Escalator standing is generally right side.',
+    photos: 'Fine publicly; ask in markets/shops.',
+    water: 'Tap water is safe; locals still drink bottled out of habit.',
+    sim: 'KT roaming center at Incheon, or eSIM (Airalo works).',
+    maps: 'Google Maps is weak. Use Naver Map or KakaoMap.',
+    vpn: 'Not needed.',
+    misc: 'Pour drinks for others, not yourself. Receive with two hands from elders.'
+  },
+  beijing: {
+    tipping: 'No tipping in mainland China.',
+    chopsticks: 'Don\'t stab rice. Don\'t point with them.',
+    shoes: 'Usually keep on.',
+    queues: 'Improving but loose — don\'t be shy at turnstiles.',
+    photos: 'Never photograph police, military, government buildings. Ask before photographing people in hutongs.',
+    water: 'Do NOT drink tap water. Hotels provide kettles — boil it or buy bottled.',
+    sim: 'Buy airport SIM w/ passport, OR better: Airalo / Ubigi eSIM before arrival — many bypass the Great Firewall.',
+    maps: 'Google Maps does NOT work. Use Apple Maps (OK), Baidu Maps, or Amap (高德). Install before arrival.',
+    vpn: 'Set up a VPN BEFORE you arrive (ExpressVPN, Astrill work best). Once in China you can\'t download one.',
+    misc: 'Cash is rare. WeChat Pay or Alipay are everything — set up Alipay "Tour Card" with your foreign card before flying in. Download Didi for taxis.'
+  },
+  nz: {
+    tipping: 'Not expected. Round up if you liked the service.',
+    chopsticks: 'N/A.',
+    shoes: 'Off in Māori marae; homes often shoes-off.',
+    queues: 'Quiet, orderly.',
+    photos: 'Fine generally; ask before photographing inside marae.',
+    water: 'Tap water excellent everywhere.',
+    sim: 'Spark or 2degrees at the airport; Airalo works.',
+    maps: 'Google Maps is fine. Download offline maps for rural drives.',
+    vpn: 'Not needed.',
+    misc: 'Drive on the LEFT. Speed cameras are everywhere. Keep a full tank in Forgotten World / rural roads — petrol stations are rare.'
+  }
+};
+
+/* =========================================================================
+   TRANSIT
+   ========================================================================= */
+const TRANSIT = {
+  osaka:  { card: 'ICOCA (or Suica — both work nationwide)', airport: 'KIX → Namba: Nankai Rapi:t 40 min, ¥1,450. Or JR Haruka to Shin-Osaka.', taxi: 'KIX → Namba taxi ≈ ¥15,000. Do not.' , tip: 'Get ICOCA at KIX JR ticket office. Add to Apple Wallet if on iPhone — tap-to-ride.'},
+  hk:     { card: 'Octopus (add to iPhone Wallet, top up via Apple Pay)', airport: 'HKG → Central: Airport Express 24 min, HK$115. Or bus A11/A21 ≈ HK$40.', taxi: 'HKG → Central taxi ≈ HK$350 + tunnel fees. Red taxi for HK Island.', tip: 'Octopus works on MTR, buses, trams, ferries, 7-Elevens, vending machines.'},
+  seoul:  { card: 'T-money (any convenience store, ~₩4,000)', airport: 'ICN → Seoul Station: AREX Express 43 min, ₩11,000. All-stop ₩4,750.', taxi: 'ICN → Myeongdong taxi ≈ ₩70,000, 1 hr+ with traffic.', tip: 'T-money works on subway, buses, taxis. Transfer between subway/bus is FREE within 30 min.'},
+  beijing:{ card: 'Yikatong (one-card) OR Alipay QR for everything', airport: 'PEK → downtown: Airport Express to Dongzhimen, 25 min, ¥25. PKX uses Daxing Airport Express.', taxi: 'PEK → center taxi ≈ ¥150. Use Didi app (English toggle).', tip: 'Alipay Tour Card > physical transit card. Links foreign Visa/MC. Set up BEFORE you fly.'},
+  nz:     { card: 'N/A — rent a car in Auckland, drop in Wellington', airport: 'AKL → city: SkyDrive bus ~NZ$18, 45 min. Or Uber ~NZ$70.', taxi: 'Most trips: Uber. In Wellington, walkable + cable car.', tip: 'Rental: book one-way Auckland → Wellington (Jucy/GO Rentals/Apex cheapest). Expect ~8 hr drive direct, do it over 3+ days.'},
+};
+
+/* =========================================================================
+   WEATHER & PACKING
+   ========================================================================= */
+const WEATHER = {
+  osaka:   { climate: 'Late cherry blossom tail. Days 18–22°C, nights 10–13°C. Occasional showers.', pack: ['Light jacket', 'Umbrella (compact)', 'Comfortable walking shoes (easy off/on)', 'Layers — it flips sunny↔cool'] },
+  hk:      { climate: 'Hot & humid, 24–29°C. Rain showers possible, thunderstorms build fast.', pack: ['Lightweight linen/cotton', 'Sweat-wicking tees', 'Compact rain shell', 'Sandals + one pair closed shoes for hikes'] },
+  seoul:   { climate: 'Spring sweet spot. 14–22°C days, 8–12°C nights. Dry & sunny mostly.', pack: ['Layers: tee + mid-layer + light jacket', 'Comfortable shoes (hills, stairs)', 'Cap (UV can surprise)'] },
+  beijing: { climate: 'Dry, dusty, 14–24°C days, 6–12°C nights. Occasional spring sandstorm from Gobi.', pack: ['Layers + light scarf (dust/wind)', 'Lip balm + moisturizer (dry!)', 'Sunglasses', 'Mask for dusty days'] },
+  nz:      { climate: 'Autumn. North Island 10–18°C, windy. Can rain without notice.', pack: ['Fleece + waterproof shell', 'Hiking shoes', 'Beanie for evenings', 'Swimsuit (hot springs if you detour)', 'Sunglasses — NZ sun is fierce even through clouds'] },
+};
+
+/* =========================================================================
+   BINGO
+   ========================================================================= */
+const BINGO = {
+  osaka: ['Takoyaki from a street vendor','Okonomiyaki','Kushikatsu at Daruma','Cherry blossom photo','Osaka Castle','Kuromon Market','Shinsekai at night','Dotonbori Glico sign','Ride a JR loop line','Get lost in a department store basement','Nara deer bow','Matcha soft-serve','Onsen dip','Visit a konbini 3×/day','Bow at a shrine','Eat at a standing bar','Say "sumimasen" 10×','Buy weird Kit Kat flavor','Ride a shinkansen','Vending-machine beer','Tiny indie coffee shop','Catch a baseball highlight on TV','Buy something from a gashapon','Stay out past midnight','See a sakura petal fall'],
+  hk: ['Dim sum breakfast','Star Ferry crossing','Peak Tram','Tram top-deck ride','Wonton noodles','Roast goose','Egg tart','Octopus card tap','Sham Shui Po street food','Dragon\'s Back hike','Man Mo Temple incense','Chungking Mansions walk-through','Bubble tea','Harbourfront night light show','Dai pai dong meal','Mid-Levels escalator','Tai Hang alley walk','Cha chaan teng milk tea','Pineapple bun','See a double-decker bus','Stanley market','Kowloon skyline photo','Eat at 2 am','Ding-ding tram fare: HK$3','Karaoke / KTV'],
+  seoul: ['Korean BBQ','Kimbap breakfast','Palace with hanbok rental','Gwangjang Market food crawl','Jjimjilbang','Han River sunset','Hanok alley photo','Tteokbokki','Naengmyeon','Soju with strangers','Noraebang session','Subway line 2 loop','Ikseon-dong café','Seongsu concept store','Bukhansan hike','Fan death debate','Convenience-store ramyeon','See a K-pop ad','Get a coffee at 1 am','Study-café drop-in','Jeonju bibimbap','Gimbap roll','Myeongdong skincare haul','Banchan count: 6+','Win at claw machine'],
+  beijing: ['Peking duck','Walk the Great Wall','Forbidden City sunrise','Hutong bike ride','Temple of Heaven tai chi','Zhajiangmian','Jianbing breakfast','Baozi from a cart','Nanluoguxiang stroll','798 Art Zone','Summer Palace boat','Use Alipay QR','Didi a cab','Drink baijiu','Eat spicy lamb skewer','Mahjong spectate','Tiananmen Square photo','Subway packed shoulder-to-shoulder','Erguotou shot','Try a VPN','Silk Market haggle','Panda at zoo','Night walk at Houhai lake','Hot water for tea','Survive a sandstorm'],
+  nz: ['Flat white','Fish & chips on a beach','Hobbiton','Kiwi bird sighting','Tongariro crossing','Glowworm cave','Sheep traffic jam','Pie from a rural bakery','Pavlova','Swim in a geothermal pool','Ferry to an island','Wellington cable car','Te Papa museum','See a haka','Drive SH43','Fill up with petrol in cash-only town','Buy L&P soda','Māori word learned','Hokey pokey ice cream','Mt Maunganui summit','Napier Art Deco','Taupo lake swim','Wine tasting','One-lane bridge','Stare at stars'],
+};
+
+/* =========================================================================
+   JOURNAL PROMPTS — one per day
+   ========================================================================= */
+const JOURNAL_PROMPTS = [
+  'What surprised you today?',
+  'A moment when you felt completely present?',
+  'Something you saw that you couldn\'t have described in advance.',
+  'Who did you talk to today, even briefly?',
+  'What smelled like this city?',
+  'A small inconvenience that turned into a good story.',
+  'If today had a single image, what is it?',
+  'Food you\'d recreate at home if you could.',
+  'Something you misunderstood and how it resolved.',
+  'A sound you\'ll remember.',
+  'What is this trip teaching you about how you like to travel?',
+  'What\'s one thing you\'d skip next time, and why?',
+  'A person you wish you\'d talked to more.',
+  'A sentence of conversation you overheard.',
+  'When did time disappear today?',
+  'What is homesickness for, if anything?',
+  'What\'s a place you haven\'t gone yet but want to?',
+  'A photo you didn\'t take but wish you had.',
+  'What would make tomorrow 10% better?',
+  'What will you miss about this leg when you leave?',
+  'What\'s been different from your expectations?',
+  'A kindness received today.',
+  'A decision you made quickly that worked out.',
+  'Who are you, traveling alone vs. home?',
+  'What did you eat standing up today?',
+  'The best thing you bought that cost under €5.',
+  'Write one sentence about tomorrow that you\'ll test against reality.',
+  'The view you\'d pin on a postcard.',
+];
+
+/* =========================================================================
+   EMERGENCY
+   ========================================================================= */
+const EMERGENCY = {
+  osaka:   { police: '110', ambulance: '119', fire: '119', embassy: 'Swedish Embassy Tokyo: +81 3-5562-5050 · Consulate Osaka: +81 6-6947-1840', hospital: '病院に連れて行ってください (Byōin ni tsurete itte kudasai)' },
+  hk:      { police: '999', ambulance: '999', fire: '999', embassy: 'Swedish Consulate HK: +852 2521-1212', hospital: '我要去醫院 (ngóh yiu heui yī yún)' },
+  seoul:   { police: '112', ambulance: '119', fire: '119', embassy: 'Swedish Embassy Seoul: +82 2-3703-3700', hospital: '병원에 가야 해요 (Byeongwone gaya haeyo)' },
+  beijing: { police: '110', ambulance: '120', fire: '119', embassy: 'Swedish Embassy Beijing: +86 10-6532-9790', hospital: '我需要去医院 (Wǒ xūyào qù yīyuàn)' },
+  nz:      { police: '111', ambulance: '111', fire: '111', embassy: 'Swedish Embassy Canberra covers NZ: +61 2-6270-2700 · Honorary Consul Auckland: +64 9-499-9895', hospital: '(English works everywhere)' },
+};
+
+/* =========================================================================
+   APP STATE
+   ========================================================================= */
+let state = {
+  activeTab: 'cities',
+  apiKey: '',
+  chat: [],
+  chatLoading: false,
+  bingo: Object.fromEntries(Object.keys(BINGO).map(k => [k, new Set()])),
+  journal: {},          // date string -> text
+  journalDay: 0,        // index into JOURNAL_PROMPTS
+  flipped: new Set(),   // phrase card keys
+  phraseLang: 'japanese',
+  emergency: { blood: '', allergies: '', contact: '' },
+  convertInput: {},     // per city input
+};
+
+const TABS = [
+  { id: 'cities',    label: 'Cities',      icon: 'map-pin' },
+  { id: 'phrases',   label: 'Phrases',     icon: 'message-circle' },
+  { id: 'currency',  label: 'Currency',    icon: 'coins' },
+  { id: 'etiquette', label: 'Etiquette',   icon: 'hand' },
+  { id: 'transit',   label: 'Transit',     icon: 'train-front' },
+  { id: 'bingo',     label: 'Bingo',       icon: 'grid-3x3' },
+  { id: 'emergency', label: 'Emergency',   icon: 'shield-alert' },
+  { id: 'time',      label: 'Time',        icon: 'clock' },
+  { id: 'weather',   label: 'Weather',     icon: 'cloud-sun' },
+  { id: 'journal',   label: 'Journal',     icon: 'pen-line' },
+  { id: 'guide',     label: 'Ask Guide',   icon: 'sparkles' },
+];
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+const $ = (s, ctx=document) => ctx.querySelector(s);
+const $$ = (s, ctx=document) => Array.from(ctx.querySelectorAll(s));
+
+function renderTimeline() {
+  const idx = currentLegIndex();
+  const leg = ITINERARY[idx];
+  $('#currentCity').innerHTML = `${leg.flag} ${leg.name}`;
+
+  const tripStart = ITINERARY[0].arrive;
+  const tripEnd = ITINERARY[ITINERARY.length-1].depart;
+  const total = daysBetween(tripStart, tripEnd);
+  const done = daysBetween(tripStart, TODAY);
+  const pct = Math.max(0, Math.min(100, (done / total) * 100));
+  $('#progressFill').style.width = pct + '%';
+
+  const nightsLeftHere = Math.max(0, daysBetween(TODAY, leg.depart));
+  const nextLeg = ITINERARY[idx+1];
+  if (nextLeg) {
+    $('#nextCountdown').innerHTML = `${nextLeg.flag} ${nextLeg.name} · <span style="color:var(--accent)">in ${nightsLeftHere}d</span>`;
+  } else {
+    $('#nextCountdown').innerHTML = `Flight home · ${nightsLeftHere}d`;
+  }
+
+  $('#tripStats').innerHTML = `
+    <span>${fmtDate(tripStart)} → ${fmtDate(tripEnd)}</span>
+    <span>${done} / ${total} days · ${Math.round(pct)}%</span>
+  `;
+
+  // Strip
+  $('#timelineStrip').innerHTML = ITINERARY.map((l, i) => {
+    const isCurrent = i === idx;
+    const isPast = i < idx;
+    return `
+      <div class="flex-shrink-0 rounded-2xl p-3 border min-w-[135px] ${isCurrent ? 'ring-2 ring-offset-2' : ''}"
+        style="border-color:var(--line); background:${isCurrent ? l.tint+'14' : 'var(--surface)'}; ${isCurrent?'--tw-ring-color:'+l.tint:''}; opacity:${isPast?0.55:1};">
+        <div class="text-lg">${l.flag}</div>
+        <div class="font-semibold text-sm mt-0.5">${l.name}</div>
+        <div class="text-[10px] muted mt-1">${fmtDate(l.arrive)} – ${fmtDate(l.depart)}</div>
+        <div class="text-[10px] mt-0.5" style="color:${l.tint}; font-weight:600;">${l.nights} nights${isCurrent?' · now':''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.map(t => `
+    <button class="tab-btn ${state.activeTab===t.id?'active':''}" data-tab="${t.id}">
+      <span class="inline-flex items-center gap-1.5"><i data-lucide="${t.icon}" class="w-3.5 h-3.5"></i>${t.label}</span>
+    </button>
+  `).join('');
+  lucide.createIcons();
+  $$('#tabs .tab-btn').forEach(b => b.addEventListener('click', () => { state.activeTab = b.dataset.tab; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }));
+}
+
+function renderCities() {
+  const idx = currentLegIndex();
+  return ITINERARY.map((l, i) => {
+    const d = CITY_DETAILS[l.id];
+    const isCurrent = i === idx;
+    return `
+    <div class="card p-5 fade-in" style="border-left: 4px solid ${l.tint};">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">${l.flag}</span>
+            <h3 class="font-display text-2xl font-bold">${l.name}</h3>
+            ${isCurrent ? '<span class="chip" style="background:'+l.tint+'20; border-color:'+l.tint+'40; color:'+l.tint+'; font-weight:600;">you are here</span>':''}
+          </div>
+          <div class="text-xs muted mt-1">${fmtDateLong(l.arrive)} → ${fmtDateLong(l.depart)} · ${l.nights} nights</div>
+        </div>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div>
+          <div class="text-[11px] uppercase tracking-wider muted font-bold mb-2">Must eat</div>
+          <ul class="space-y-1.5">
+            ${d.mustEat.map(m => `<li class="flex gap-2"><span style="color:${l.tint};">●</span><span><b>${m.dish}</b> <span class="muted">— ${m.where}</span></span></li>`).join('')}
+          </ul>
+        </div>
+
+        <div>
+          <div class="text-[11px] uppercase tracking-wider muted font-bold mb-2">Wander here</div>
+          <div class="flex flex-wrap gap-1.5">${d.neighborhoods.map(n => `<span class="chip">${n}</span>`).join('')}</div>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <div class="text-[11px] uppercase tracking-wider font-bold mb-2" style="color:#10b981;">Don't miss</div>
+            <ul class="space-y-1 text-[13px]">
+              ${d.dontMiss.map(x => `<li class="flex gap-1.5"><span style="color:#10b981;">✓</span><span>${x}</span></li>`).join('')}
+            </ul>
+          </div>
+          <div>
+            <div class="text-[11px] uppercase tracking-wider font-bold mb-2" style="color:#f43f5e;">Skip</div>
+            <ul class="space-y-1 text-[13px]">
+              ${d.skip.map(x => `<li class="flex gap-1.5"><span style="color:#f43f5e;">✕</span><span>${x}</span></li>`).join('')}
+            </ul>
+          </div>
+        </div>
+
+        <div class="rounded-xl p-3" style="background:${l.tint}10; border:1px dashed ${l.tint}40;">
+          <div class="text-[11px] uppercase tracking-wider font-bold mb-1" style="color:${l.tint};">Offbeat gem</div>
+          <div class="text-[13px]">${d.offbeat}</div>
+        </div>
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+function renderPhrases() {
+  const langs = Object.keys(PHRASES);
+  return `
+    <div class="flex gap-2 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-1">
+      ${langs.map(k => `<button class="tab-btn ${state.phraseLang===k?'active':''}" data-lang="${k}"><span>${PHRASES[k].flag} ${PHRASES[k].label}</span></button>`).join('')}
+    </div>
+    <div class="grid grid-cols-2 gap-3 mt-4" id="phraseGrid">
+      ${PHRASES[state.phraseLang].list.map((p, i) => {
+        const key = state.phraseLang+'_'+i;
+        const flipped = state.flipped.has(key);
+        return `
+        <div class="flip ${flipped?'flipped':''}" data-key="${key}" style="height: 130px; cursor:pointer;">
+          <div class="flip-inner">
+            <div class="flip-face card">
+              <div class="text-[10px] uppercase tracking-wider muted font-bold">Tap to flip</div>
+              <div class="text-center mt-1 font-semibold">${p.en}</div>
+            </div>
+            <div class="flip-face flip-back" style="background: linear-gradient(135deg, ${PHRASES[state.phraseLang].tint}, ${PHRASES[state.phraseLang].tint}CC); color: white; border: none;">
+              <div class="text-center text-lg font-semibold leading-tight">${p.native}</div>
+              <div class="text-center text-[11px] mt-1.5 opacity-90 italic">${p.roman}</div>
+            </div>
+          </div>
+        </div>
+        `;
+      }).join('')}
+    </div>
+    <p class="text-[11px] muted mt-3">Tap a card to flip. Keep a few ready to show on screen.</p>
+  `;
+}
+
+function renderCurrency() {
+  return `
+  <div class="space-y-3">
+    ${ITINERARY.map(l => {
+      const c = CURRENCY[l.id];
+      const val = state.convertInput[l.id] || '';
+      const eur = val ? (parseFloat(val) / c.perEur) : null;
+      return `
+        <div class="card p-4" style="border-left: 4px solid ${l.tint};">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">${l.flag}</span>
+              <div>
+                <div class="font-semibold">${l.name}</div>
+                <div class="text-[11px] muted">1 EUR ≈ ${c.perEur.toLocaleString()} ${c.code}</div>
+              </div>
+            </div>
+            <span class="chip" style="color:${l.tint}; border-color:${l.tint}40;">${c.code}</span>
+          </div>
+          <div class="flex gap-2 items-center">
+            <div class="flex-1 relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm muted font-mono">${c.symbol}</span>
+              <input type="number" inputmode="decimal" placeholder="amount in ${c.code}" value="${val}" data-city="${l.id}" class="currency-in w-full pl-9 pr-3 py-2 rounded-xl border line text-sm" />
+            </div>
+            <div class="px-3 py-2 rounded-xl font-mono text-sm font-semibold" style="background:${l.tint}15; color:${l.tint}; min-width:90px; text-align:center;">
+              ${eur !== null && !isNaN(eur) ? '€ ' + eur.toFixed(2) : '€ —'}
+            </div>
+          </div>
+          <div class="text-[11px] muted mt-2 italic">↳ ${c.rule}</div>
+        </div>
+      `;
+    }).join('')}
+    <p class="text-[11px] muted text-center">Rates are approximate, locked for this app (April 2026). Always confirm at an ATM for big purchases.</p>
+  </div>
+  `;
+}
+
+function renderEtiquette() {
+  return ITINERARY.map(l => {
+    const e = ETIQUETTE[l.id];
+    return `
+    <div class="card p-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-xl">${l.flag}</span>
+        <h3 class="font-display text-lg font-bold">${l.country}</h3>
+      </div>
+      <div class="grid gap-2 text-[13px]">
+        ${[
+          ['💴 Tipping', e.tipping],
+          ['🥢 Chopsticks', e.chopsticks],
+          ['👟 Shoes', e.shoes],
+          ['🚶 Queues & transit', e.queues],
+          ['📸 Photo etiquette', e.photos],
+          ['💧 Tap water', e.water],
+          ['📱 SIM / eSIM', e.sim],
+          ['🗺️ Maps', e.maps],
+          ['🔒 VPN', e.vpn],
+          ['📍 Local knowledge', e.misc],
+        ].map(([k,v]) => `
+          <div class="flex gap-2">
+            <div class="w-32 flex-shrink-0 font-semibold text-[11px] uppercase tracking-wider muted pt-0.5">${k}</div>
+            <div>${v}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+function renderTransit() {
+  return ITINERARY.map(l => {
+    const t = TRANSIT[l.id];
+    return `
+    <div class="card p-4" style="border-left: 4px solid ${l.tint};">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-xl">${l.flag}</span>
+        <h3 class="font-display text-lg font-bold">${l.name}</h3>
+      </div>
+      <div class="space-y-2 text-[13px]">
+        <div class="flex gap-2"><b class="w-20 flex-shrink-0 muted text-[11px] uppercase tracking-wider pt-0.5">Card</b><span>${t.card}</span></div>
+        <div class="flex gap-2"><b class="w-20 flex-shrink-0 muted text-[11px] uppercase tracking-wider pt-0.5">Airport</b><span>${t.airport}</span></div>
+        <div class="flex gap-2"><b class="w-20 flex-shrink-0 muted text-[11px] uppercase tracking-wider pt-0.5">Taxi</b><span>${t.taxi}</span></div>
+        <div class="rounded-xl p-2.5 mt-2" style="background:${l.tint}12;">
+          <b class="text-[11px] uppercase tracking-wider" style="color:${l.tint};">Pro tip · </b>${t.tip}
+        </div>
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+function renderBingo() {
+  const idx = currentLegIndex();
+  const currentId = state.activeBingoCity || ITINERARY[idx].id;
+  const items = BINGO[currentId].slice(0, 25); // 5x5
+  const marks = state.bingo[currentId];
+  return `
+  <div class="flex gap-2 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-1 mb-3">
+    ${ITINERARY.map(l => `<button class="tab-btn ${currentId===l.id?'active':''}" data-bcity="${l.id}"><span>${l.flag} ${l.name}</span></button>`).join('')}
+  </div>
+  <div class="card p-3">
+    <div class="grid grid-cols-5 gap-1.5">
+      ${items.map((item, i) => `
+        <div class="bingo-cell ${marks.has(i)?'marked':''}" data-idx="${i}">${item}</div>
+      `).join('')}
+    </div>
+    <div class="flex justify-between items-center mt-3 text-[11px] muted px-1">
+      <span>${marks.size} / 25 stamped</span>
+      <button id="resetBingo" class="underline hover:no-underline">reset this card</button>
+    </div>
+  </div>
+  <p class="text-[11px] muted mt-3 text-center">Tap a tile as you do each thing. State lives in this tab only — screenshot for posterity.</p>
+  `;
+}
+
+function renderEmergency() {
+  return `
+  <div class="card p-4">
+    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-2">Your info</div>
+    <div class="grid grid-cols-1 gap-2 mb-4">
+      <input id="eBlood" placeholder="Blood type" value="${state.emergency.blood}" class="px-3 py-2 rounded-xl border line text-sm" />
+      <input id="eAllergies" placeholder="Allergies / meds" value="${state.emergency.allergies}" class="px-3 py-2 rounded-xl border line text-sm" />
+      <input id="eContact" placeholder="Emergency contact (name + phone)" value="${state.emergency.contact}" class="px-3 py-2 rounded-xl border line text-sm" />
+    </div>
+  </div>
+  ${ITINERARY.map(l => {
+    const e = EMERGENCY[l.id];
+    return `
+    <div class="card p-4" style="border-left: 4px solid #ef4444;">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-xl">${l.flag}</span>
+        <h3 class="font-display text-lg font-bold">${l.name}</h3>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <a href="tel:${e.police}" class="rounded-xl p-2.5 text-center border line hover:scale-[1.02] transition">
+          <div class="text-[10px] uppercase tracking-wider muted">Police</div>
+          <div class="font-display text-xl font-bold">${e.police}</div>
+        </a>
+        <a href="tel:${e.ambulance}" class="rounded-xl p-2.5 text-center border line hover:scale-[1.02] transition">
+          <div class="text-[10px] uppercase tracking-wider muted">Ambulance</div>
+          <div class="font-display text-xl font-bold">${e.ambulance}</div>
+        </a>
+        <a href="tel:${e.fire}" class="rounded-xl p-2.5 text-center border line hover:scale-[1.02] transition">
+          <div class="text-[10px] uppercase tracking-wider muted">Fire</div>
+          <div class="font-display text-xl font-bold">${e.fire}</div>
+        </a>
+      </div>
+      <div class="space-y-1.5 text-[13px]">
+        <div class="flex gap-2"><b class="text-[11px] uppercase tracking-wider muted pt-0.5 w-24 flex-shrink-0">Embassy</b><span>${e.embassy}</span></div>
+        <div class="flex gap-2"><b class="text-[11px] uppercase tracking-wider muted pt-0.5 w-24 flex-shrink-0">"Hospital"</b><span class="font-medium">${e.hospital}</span></div>
+      </div>
+    </div>
+    `;
+  }).join('')}
+  <p class="text-[11px] muted text-center">112 also works as a unified emergency number in most of these (except HK where it's 999).</p>
+  `;
+}
+
+function renderTime() {
+  const cities = [
+    { name: 'Stockholm',  tz: 'Europe/Stockholm',  flag: '🇸🇪' },
+    { name: 'Osaka',      tz: 'Asia/Tokyo',         flag: '🇯🇵' },
+    { name: 'Hong Kong',  tz: 'Asia/Hong_Kong',     flag: '🇭🇰' },
+    { name: 'Seoul',      tz: 'Asia/Seoul',         flag: '🇰🇷' },
+    { name: 'Beijing',    tz: 'Asia/Shanghai',      flag: '🇨🇳' },
+    { name: 'Auckland',   tz: 'Pacific/Auckland',   flag: '🇳🇿' },
+  ];
+  const now = new Date();
+  return `
+  <div class="card p-4">
+    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-3">Now, around the world</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      ${cities.map(c => {
+        const t = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: c.tz, hour12: false });
+        const d = now.toLocaleDateString('en-US', { weekday: 'short', timeZone: c.tz });
+        return `
+          <div class="text-center rounded-xl p-3 border line">
+            <div class="text-lg">${c.flag}</div>
+            <div class="font-display text-xl font-bold tabular-nums mt-1">${t}</div>
+            <div class="text-[11px] muted">${c.name} · ${d}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <p class="text-[11px] muted text-center mt-3">Updates each time you open this tab.</p>
+  </div>
+  `;
+}
+
+function renderWeather() {
+  return ITINERARY.map(l => {
+    const w = WEATHER[l.id];
+    return `
+    <div class="card p-4" style="border-left: 4px solid ${l.tint};">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-xl">${l.flag}</span>
+        <h3 class="font-display text-lg font-bold">${l.name}</h3>
+      </div>
+      <div class="text-[13px] mb-3">${w.climate}</div>
+      <div class="text-[11px] uppercase tracking-wider muted font-bold mb-1.5">Pack</div>
+      <div class="flex flex-wrap gap-1.5">${w.pack.map(p => `<span class="chip">${p}</span>`).join('')}</div>
+    </div>
+    `;
+  }).join('');
+}
+
+function renderJournal() {
+  const dayIdx = Math.max(0, daysBetween(ITINERARY[0].arrive, TODAY));
+  const dayCount = daysBetween(ITINERARY[0].arrive, ITINERARY[ITINERARY.length-1].depart);
+  const prompt = JOURNAL_PROMPTS[state.journalDay % JOURNAL_PROMPTS.length];
+  const text = state.journal[state.journalDay] || '';
+  return `
+  <div class="card p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <div class="text-[11px] uppercase tracking-wider muted font-bold">Day ${state.journalDay+1} of ~${dayCount}</div>
+        <div class="font-display text-lg font-bold mt-0.5">Today's prompt</div>
+      </div>
+      <div class="flex gap-1">
+        <button id="jPrev" class="w-9 h-9 rounded-full border line hover:scale-105 transition"><i data-lucide="chevron-left" class="w-4 h-4 mx-auto"></i></button>
+        <button id="jNext" class="w-9 h-9 rounded-full border line hover:scale-105 transition"><i data-lucide="chevron-right" class="w-4 h-4 mx-auto"></i></button>
+      </div>
+    </div>
+    <div class="rounded-xl p-3 mb-3 text-[14px] italic" style="background: linear-gradient(135deg, #f9731615, #ec489915); border: 1px dashed var(--line);">
+      "${prompt}"
+    </div>
+    <textarea id="jText" rows="8" placeholder="Write freely…" class="w-full rounded-xl border line p-3 text-sm leading-relaxed resize-y">${text}</textarea>
+    <div class="flex justify-between items-center mt-2 text-[11px] muted">
+      <span>${text.length} characters</span>
+      <span>In-session only · copy out before closing</span>
+    </div>
+  </div>
+  <div class="card p-4">
+    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-2">All entries</div>
+    ${Object.keys(state.journal).length === 0
+      ? '<p class="text-[13px] muted italic">Nothing yet. Write a line — it\'ll appear here.</p>'
+      : Object.entries(state.journal).map(([k,v]) => `
+        <div class="border-t line pt-2 mt-2 text-[13px]">
+          <div class="flex justify-between text-[11px] muted font-semibold uppercase tracking-wider mb-1">
+            <span>Day ${parseInt(k)+1}</span>
+            <button data-jump="${k}" class="underline hover:no-underline">jump</button>
+          </div>
+          <div class="line-clamp-3">${escapeHtml(v).slice(0,240)}${v.length>240?'…':''}</div>
+        </div>
+      `).join('')}
+  </div>
+  `;
+}
+
+function renderGuide() {
+  const hasKey = !!state.apiKey;
+  return `
+  <div class="card p-4 min-h-[420px] flex flex-col">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center text-white" style="background: linear-gradient(135deg,#f97316,#ec4899);"><i data-lucide="sparkles" class="w-4 h-4"></i></div>
+        <div>
+          <div class="font-display font-bold">Ask the Guide</div>
+          <div class="text-[11px] muted">Claude Sonnet 4.6 · direct from your browser</div>
+        </div>
+      </div>
+      <button id="clearChat" class="text-[11px] muted underline hover:no-underline">clear</button>
+    </div>
+
+    <div id="chatLog" class="flex-1 flex flex-col gap-2.5 overflow-y-auto max-h-[55vh] pb-2">
+      ${!hasKey ? `
+        <div class="m-auto text-center max-w-xs py-8">
+          <div class="inline-flex w-12 h-12 rounded-2xl items-center justify-center mb-3" style="background: linear-gradient(135deg,#f9731620,#ec489920);">
+            <i data-lucide="key" class="w-5 h-5" style="color:#ec4899"></i>
+          </div>
+          <div class="font-semibold mb-1">Paste your API key to start chatting</div>
+          <div class="text-[12px] muted">Tap the ⚙️ settings in the header. Your key stays in this tab only.</div>
+        </div>
+      ` : state.chat.length === 0 ? `
+        <div class="m-auto text-center max-w-xs py-6">
+          <div class="text-[12px] muted mb-3">Try one of these:</div>
+          <div class="flex flex-col gap-1.5">
+            ${['What should I do tonight?','Best hidden bars in Osaka','Suggest a Day 1 Hong Kong plan','Safe late-night food near me?'].map(q => `
+              <button class="suggest-q text-[12px] px-3 py-2 rounded-xl border line hover:bg-black/5 dark:hover:bg-white/10 text-left">${q}</button>
+            `).join('')}
+          </div>
+        </div>
+      ` : state.chat.map(m => `
+        <div class="bubble ${m.role==='user'?'user':'bot'}">${escapeHtml(m.content).replace(/\n/g,'<br>')}</div>
+      `).join('')}
+      ${state.chatLoading ? '<div class="bubble bot typing"><span></span><span></span><span></span></div>' : ''}
+    </div>
+
+    <div class="flex gap-2 pt-3 border-t line mt-2">
+      <input id="chatInput" placeholder="${hasKey ? 'Ask anything about the trip…' : 'Add your API key first'}" ${hasKey?'':'disabled'} class="flex-1 px-3 py-2.5 rounded-xl border line text-sm" />
+      <button id="chatSend" ${hasKey?'':'disabled'} class="px-4 rounded-xl text-white font-medium disabled:opacity-40" style="background: linear-gradient(135deg,#f97316,#ec4899);"><i data-lucide="send" class="w-4 h-4"></i></button>
+    </div>
+    <div class="text-[10px] muted mt-2 text-center">Your key stays in this tab only, never saved. Calls go direct to api.anthropic.com.</div>
+  </div>
+  `;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderContent() {
+  const c = $('#content');
+  const tab = state.activeTab;
+  let html = '';
+  if (tab === 'cities')     html = renderCities();
+  else if (tab === 'phrases')   html = renderPhrases();
+  else if (tab === 'currency')  html = renderCurrency();
+  else if (tab === 'etiquette') html = renderEtiquette();
+  else if (tab === 'transit')   html = renderTransit();
+  else if (tab === 'bingo')     html = renderBingo();
+  else if (tab === 'emergency') html = renderEmergency();
+  else if (tab === 'time')      html = renderTime();
+  else if (tab === 'weather')   html = renderWeather();
+  else if (tab === 'journal')   html = renderJournal();
+  else if (tab === 'guide')     html = renderGuide();
+  c.innerHTML = html;
+  c.classList.remove('fade-in'); void c.offsetWidth; c.classList.add('fade-in');
+  bindContent();
+  lucide.createIcons();
+}
+
+function bindContent() {
+  // Phrases: flip + lang switch
+  $$('#content [data-lang]').forEach(b => b.addEventListener('click', () => {
+    state.phraseLang = b.dataset.lang; state.flipped = new Set(); renderContent();
+  }));
+  $$('#content .flip').forEach(el => el.addEventListener('click', () => {
+    const k = el.dataset.key;
+    if (state.flipped.has(k)) state.flipped.delete(k); else state.flipped.add(k);
+    el.classList.toggle('flipped');
+  }));
+
+  // Currency
+  $$('#content .currency-in').forEach(inp => inp.addEventListener('input', e => {
+    state.convertInput[e.target.dataset.city] = e.target.value;
+    renderContent();
+    const next = $('#content .currency-in[data-city="'+e.target.dataset.city+'"]');
+    if (next) { next.focus(); next.setSelectionRange(e.target.value.length, e.target.value.length); }
+  }));
+
+  // Bingo
+  $$('#content [data-bcity]').forEach(b => b.addEventListener('click', () => {
+    state.activeBingoCity = b.dataset.bcity; renderContent();
+  }));
+  $$('#content .bingo-cell').forEach(el => el.addEventListener('click', () => {
+    const city = state.activeBingoCity || ITINERARY[currentLegIndex()].id;
+    const i = parseInt(el.dataset.idx);
+    if (state.bingo[city].has(i)) state.bingo[city].delete(i); else state.bingo[city].add(i);
+    el.classList.toggle('marked');
+    const counter = $('#content .text-\\[11px\\].muted span');
+    // re-render count label
+    renderContent();
+  }));
+  const resetBtn = $('#resetBingo');
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    const city = state.activeBingoCity || ITINERARY[currentLegIndex()].id;
+    state.bingo[city] = new Set(); renderContent();
+  });
+
+  // Emergency inputs
+  ['eBlood','eAllergies','eContact'].forEach(id => {
+    const el = $('#'+id);
+    if (el) el.addEventListener('input', e => {
+      state.emergency[id.substring(1).toLowerCase()] = e.target.value;
+    });
+  });
+
+  // Journal
+  const jPrev = $('#jPrev'), jNext = $('#jNext'), jText = $('#jText');
+  if (jPrev) jPrev.addEventListener('click', () => { if (state.journalDay > 0) { state.journalDay--; renderContent(); }});
+  if (jNext) jNext.addEventListener('click', () => { state.journalDay++; renderContent(); });
+  if (jText) jText.addEventListener('input', e => { state.journal[state.journalDay] = e.target.value; });
+  $$('#content [data-jump]').forEach(b => b.addEventListener('click', () => { state.journalDay = parseInt(b.dataset.jump); renderContent(); }));
+
+  // Chat
+  const send = $('#chatSend'), input = $('#chatInput');
+  if (send) send.addEventListener('click', () => sendChat(input.value));
+  if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(input.value); });
+  $$('#content .suggest-q').forEach(b => b.addEventListener('click', () => sendChat(b.textContent)));
+  const clr = $('#clearChat'); if (clr) clr.addEventListener('click', () => { state.chat = []; renderContent(); });
+}
+
+/* =========================================================================
+   CHAT — Claude
+   ========================================================================= */
+function buildSystemPrompt() {
+  const idx = currentLegIndex();
+  const legs = ITINERARY.map((l, i) => `${i+1}. ${l.flag} ${l.name} (${l.country}): ${fmtDate(l.arrive)}–${fmtDate(l.depart)}, ${l.nights} nights${i===idx?' [CURRENT]':''}`).join('\n');
+  return `You are Alvin's personal travel guide for this specific trip. Be warm, concise, and extremely specific — real restaurant names, real neighborhoods, real metro stops. Prefer a single, confident recommendation over a bulleted list. Avoid generic travel-blog advice.
+
+Today is ${fmtDateLong(TODAY)}. Alvin's itinerary:
+${legs}
+
+Right now Alvin is in ${ITINERARY[idx].name} (${ITINERARY[idx].country}). They have ${daysBetween(TODAY, ITINERARY[idx].depart)} night(s) left in this city before moving to ${ITINERARY[idx+1] ? ITINERARY[idx+1].name : 'fly home'}.
+
+Style:
+- Friendly, like a well-traveled friend texting back
+- 1-3 short paragraphs max; bullet lists only when truly comparing options
+- When recommending food/places, give one pick and a quick why — don't dump a list
+- If Alvin asks something you can't know (live hours, current weather), say so briefly and offer how to check
+- Always answer in English
+
+You can assume Alvin has a Swedish passport, speaks English, and is an experienced independent traveler.`;
+}
+
+async function sendChat(text) {
+  text = (text || '').trim();
+  if (!text) return;
+  if (!state.apiKey) return;
+
+  state.chat.push({ role: 'user', content: text });
+  state.chatLoading = true;
+  renderContent();
+  // Clear input
+  setTimeout(() => { const i = $('#chatInput'); if (i) i.value = ''; }, 0);
+
+  // Scroll chat to bottom
+  setTimeout(() => { const log = $('#chatLog'); if (log) log.scrollTop = log.scrollHeight; }, 50);
+
+  try {
+    const payload = {
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      system: buildSystemPrompt(),
+      messages: state.chat.slice(-10).map(m => ({ role: m.role, content: m.content })),
+    };
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      let msg = 'Something went wrong.';
+      if (res.status === 401) msg = 'That API key didn\'t work — double-check it in Settings.';
+      else if (res.status === 429) msg = 'Rate limited. Wait a minute and try again.';
+      else if (res.status >= 500) msg = 'Anthropic\'s having trouble — try again in a bit.';
+      else msg = `Error ${res.status}: ${errText.slice(0,120)}`;
+      state.chat.push({ role: 'assistant', content: msg });
+    } else {
+      const json = await res.json();
+      const textBlock = (json.content || []).find(b => b.type === 'text');
+      state.chat.push({ role: 'assistant', content: (textBlock && textBlock.text) || '(empty reply)' });
+    }
+  } catch (err) {
+    state.chat.push({ role: 'assistant', content: 'Network error — are you offline? (' + (err.message || 'unknown') + ')' });
+  } finally {
+    state.chatLoading = false;
+    renderContent();
+    setTimeout(() => { const log = $('#chatLog'); if (log) log.scrollTop = log.scrollHeight; }, 50);
+  }
+}
+
+/* =========================================================================
+   SETTINGS / THEME
+   ========================================================================= */
+function bindSettings() {
+  const modal = $('#settingsModal');
+  const open = () => { modal.classList.remove('hidden'); modal.classList.add('flex'); $('#apiKeyInput').value = state.apiKey; updateKeyStatus(); };
+  const close = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+  $('#settingsBtn').addEventListener('click', open);
+  $('#closeSettings').addEventListener('click', close);
+  modal.addEventListener('click', e => { if (e.target === modal) close(); });
+  $('#saveKey').addEventListener('click', () => {
+    state.apiKey = $('#apiKeyInput').value.trim();
+    updateKeyStatus();
+    if (state.activeTab === 'guide') renderContent();
+  });
+  $('#clearKey').addEventListener('click', () => {
+    state.apiKey = ''; $('#apiKeyInput').value = ''; updateKeyStatus();
+    if (state.activeTab === 'guide') renderContent();
+  });
+}
+function updateKeyStatus() {
+  const s = $('#keyStatus');
+  if (state.apiKey) s.innerHTML = '<span style="color:#10b981;">● Key loaded · chat ready</span>';
+  else s.innerHTML = '● No key set';
+}
+
+function bindDarkMode() {
+  const apply = () => {
+    document.documentElement.classList.toggle('dark', state.dark);
+    const icon = $('#darkBtn i');
+    if (icon) { icon.setAttribute('data-lucide', state.dark ? 'sun' : 'moon'); lucide.createIcons(); }
+  };
+  state.dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  apply();
+  $('#darkBtn').addEventListener('click', () => { state.dark = !state.dark; apply(); });
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+function render() {
+  renderTimeline();
+  renderTabs();
+  renderContent();
+  lucide.createIcons();
+}
+
+function init() {
+  $('#todayFooter').textContent = fmtDateLong(TODAY);
+  bindDarkMode();
+  bindSettings();
+  render();
+
+  // Timeline refresh every minute in case day ticks over
+  setInterval(renderTimeline, 60000);
+  // Refresh clocks on Time tab every 30s
+  setInterval(() => { if (state.activeTab === 'time') renderContent(); }, 30000);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
