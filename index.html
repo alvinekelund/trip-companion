@@ -144,6 +144,7 @@
         <span class="dot-pulse"></span>
         <span id="currentCity" class="font-display text-2xl font-bold"></span>
       </div>
+      <div id="currentNight" class="text-[11px] muted mt-1 font-medium"></div>
     </div>
     <div class="text-right">
       <div class="text-[11px] uppercase tracking-wider muted font-semibold">Next up</div>
@@ -189,6 +190,7 @@
    DATA — dates, cities, phrases, etc.
    ========================================================================= */
 const TODAY = new Date('2026-04-17T00:00:00');
+const TRIP_START = new Date('2026-04-16T00:00:00');
 
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 function fmtDate(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
@@ -196,23 +198,17 @@ function fmtDateLong(d) { return d.toLocaleDateString('en-US', { weekday: 'short
 function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
 
 const ITINERARY = [
-  { id: 'osaka',    name: 'Osaka',    country: 'Japan',       flag: '🇯🇵', nights: 4, tint: '#ef4444', tintSoft:'#fee2e2' },
+  { id: 'osaka',    name: 'Osaka',    country: 'Japan',       flag: '🇯🇵', nights: 5, tint: '#ef4444', tintSoft:'#fee2e2' },
   { id: 'hk',       name: 'Hong Kong',country: 'Hong Kong',   flag: '🇭🇰', nights: 3, tint: '#f59e0b', tintSoft:'#fef3c7' },
   { id: 'seoul',    name: 'Seoul',    country: 'South Korea', flag: '🇰🇷', nights: 4, tint: '#3b82f6', tintSoft:'#dbeafe' },
   { id: 'beijing',  name: 'Beijing',  country: 'China',       flag: '🇨🇳', nights: 6, tint: '#dc2626', tintSoft:'#fee2e2' },
   { id: 'nz',       name: 'New Zealand', country: 'NZ',       flag: '🇳🇿', nights: 6, tint: '#10b981', tintSoft:'#d1fae5' },
 ];
 
-// Compute start & end dates. Osaka started earlier but we only have "4 nights remaining" — so depart = TODAY + 4
-let cursor = new Date(TODAY);
-ITINERARY.forEach((leg, i) => {
-  if (i === 0) {
-    leg.arrive = new Date('2026-04-13T00:00:00'); // assume arrived 4 days before (flavor only)
-    leg.depart = addDays(TODAY, leg.nights);
-  } else {
-    leg.arrive = new Date(cursor);
-    leg.depart = addDays(cursor, leg.nights);
-  }
+let cursor = new Date(TRIP_START);
+ITINERARY.forEach(leg => {
+  leg.arrive = new Date(cursor);
+  leg.depart = addDays(cursor, leg.nights);
   cursor = new Date(leg.depart);
 });
 
@@ -545,14 +541,19 @@ const EMERGENCY = {
 const BOOKINGS = {
   flights: [
     {
-      legCity: 'hk', // destination city — this flight delivers Alvin to this city
+      legCity: 'hk',
       date: '2026-04-21', from: { code: 'KIX', name: 'Kansai Intl', terminal: 'T2', time: '08:15' },
       to:   { code: 'HKG', name: 'Hong Kong Intl', terminal: 'T1', time: '11:40' },
       airline: 'Peach Aviation', flightNo: 'MM063', aircraft: 'Airbus A321', cabin: 'Economy',
       pnr: 'UYTDBQ', ref: 'Trip.com 1433810619883779',
-      baggage: '1 personal + 1 carry-on, 7 kg combined · NO checked baggage',
       passengers: 'Alvin Erik Ekelund + Anna Houstecka',
       meals: 'No meals',
+      baggage: {
+        personal: '1 pc · ≤ 50·40·25 cm',
+        carryOn: '1 pc · ≤ 50·40·25 cm',
+        checked: null,
+        rule: 'Personal + carry-on combined ≤ 7 kg per person',
+      },
     },
     {
       legCity: 'seoul',
@@ -560,6 +561,12 @@ const BOOKINGS = {
       to:   { code: 'ICN', name: 'Incheon Intl', terminal: 'T1', time: '21:35' },
       airline: 'HK Express', flightNo: 'UO626', aircraft: 'Airbus A321neo', cabin: 'Economy',
       pnr: 'BY1Q2Q',
+      baggage: {
+        personal: '1 pc · ≤ 40·25·20 cm',
+        carryOn: null,
+        checked: null,
+        rule: '⚠ Strictest — personal item only, 7 kg total per person',
+      },
     },
     {
       legCity: 'beijing',
@@ -567,13 +574,25 @@ const BOOKINGS = {
       to:   { code: 'PEK', name: 'Beijing Capital', terminal: 'T3', time: '14:00' },
       airline: 'Asiana Airlines', flightNo: 'OZ333', cabin: 'Economy',
       pnr: '7GCY84',
+      baggage: {
+        personal: '1 pc',
+        carryOn: '1 pc · ≤ 55·40·20 cm',
+        checked: '1 pc · 23 kg · ≤ 158 cm total',
+        rule: 'Personal + carry-on combined ≤ 10 kg',
+      },
     },
     {
-      legCity: 'pvg', // connection, not a leg city
+      legCity: 'pvg',
       date: '2026-05-04', from: { code: 'PEK', name: 'Beijing Capital', terminal: 'T2', time: '19:30' },
       to:   { code: 'PVG', name: 'Shanghai Pudong', terminal: 'T1', time: '21:55' },
       airline: 'China Eastern', flightNo: 'MU5164', cabin: 'Economy',
-      pnr: 'PVEK63', note: 'Connection — same ticket as MU779',
+      pnr: 'PVEK63', note: 'Connection — same ticket as MU779. China domestic power-bank rule: power banks without a clear 3C logo, recalled models, or faulty units are prohibited.',
+      baggage: {
+        personal: '1 pc · ≤ 35·32·18 cm',
+        carryOn: '1 pc · 8 kg · ≤ 55·40·20 cm',
+        checked: '1 pc · 23 kg · ≤ 158 cm total',
+        rule: 'Same allowance applies to connecting MU779',
+      },
     },
     {
       legCity: 'nz',
@@ -581,13 +600,25 @@ const BOOKINGS = {
       to:   { code: 'AKL', name: 'Auckland', terminal: '', time: '15:45' },
       airline: 'China Eastern', flightNo: 'MU779', cabin: 'Economy',
       pnr: 'PVEK63', note: 'Red-eye — departs just after midnight on May 5',
+      baggage: {
+        personal: '1 pc · ≤ 35·32·18 cm',
+        carryOn: '1 pc · 8 kg · ≤ 55·40·20 cm',
+        checked: '1 pc · 23 kg · ≤ 158 cm total',
+        rule: 'Through-checked from PEK on the same ticket',
+      },
     },
     {
-      legCity: 'mel', // outbound connection, not in itinerary
+      legCity: 'mel',
       date: '2026-05-11', from: { code: 'WLG', name: 'Wellington', terminal: '', time: '06:00' },
       to:   { code: 'MEL', name: 'Melbourne', terminal: 'T2', time: '08:10' },
       airline: 'Air New Zealand', flightNo: 'NZ253', cabin: 'Economy',
       pnr: 'W5PBSH',
+      baggage: {
+        personal: '1 pc',
+        carryOn: '1 pc · 7 kg · ≤ 118 cm total (55·40·23)',
+        checked: null,
+        rule: 'Carry-on only fare',
+      },
     },
     {
       legCity: 'sin',
@@ -595,6 +626,12 @@ const BOOKINGS = {
       to:   { code: 'SIN', name: 'Singapore Changi', terminal: 'T1', time: '19:05' },
       airline: 'Scoot', flightNo: 'TR059', cabin: 'Economy',
       pnr: 'H8FSVC',
+      baggage: {
+        personal: '1 pc · ≤ 40·30·10 cm',
+        carryOn: '1 pc · ≤ 54·38·23 cm',
+        checked: null,
+        rule: 'Personal + carry-on combined ≤ 10 kg',
+      },
     },
   ],
   car: {
@@ -660,6 +697,8 @@ function renderTimeline() {
   const idx = currentLegIndex();
   const leg = ITINERARY[idx];
   $('#currentCity').innerHTML = `${leg.flag} ${leg.name}`;
+  const nightNum = Math.max(1, Math.min(leg.nights, daysBetween(leg.arrive, TODAY) + 1));
+  $('#currentNight').innerHTML = `Night <b class="ink">${nightNum}</b> of ${leg.nights}`;
 
   const tripStart = ITINERARY[0].arrive;
   const tripEnd = ITINERARY[ITINERARY.length-1].depart;
@@ -1083,18 +1122,52 @@ function renderBookings() {
         </div>
       </div>
 
+      ${renderBaggage(f.baggage)}
+
       <div class="border-t line pt-2.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[11.5px]">
         <div><span class="muted uppercase tracking-wider text-[10px] font-bold">PNR</span> <span class="font-mono font-semibold">${f.pnr}</span></div>
         ${f.aircraft ? `<div><span class="muted uppercase tracking-wider text-[10px] font-bold">Aircraft</span> ${f.aircraft}</div>` : ''}
         ${f.cabin ? `<div><span class="muted uppercase tracking-wider text-[10px] font-bold">Cabin</span> ${f.cabin}</div>` : ''}
         ${f.ref ? `<div class="col-span-2"><span class="muted uppercase tracking-wider text-[10px] font-bold">Ref</span> <span class="font-mono text-[11px]">${f.ref}</span></div>` : ''}
-        ${f.baggage ? `<div class="col-span-2 mt-1 rounded-lg px-2 py-1.5" style="background:#fef3c730; border:1px dashed #f59e0b60;"><span class="uppercase tracking-wider text-[10px] font-bold" style="color:#b45309;">⚠ Baggage</span> ${f.baggage}</div>` : ''}
         ${f.meals ? `<div class="col-span-2"><span class="muted uppercase tracking-wider text-[10px] font-bold">Meals</span> ${f.meals}</div>` : ''}
         ${f.passengers ? `<div class="col-span-2"><span class="muted uppercase tracking-wider text-[10px] font-bold">Passengers</span> ${f.passengers}</div>` : ''}
         ${f.note ? `<div class="col-span-2 muted italic">${f.note}</div>` : ''}
       </div>
     </div>
   `;
+
+  function renderBaggage(b) {
+    if (!b) return '';
+    const cell = (label, val, icon) => {
+      const none = !val;
+      const bg = none ? 'background:#fef2f2; border:1px solid #fecaca;' : 'background:var(--surface); border:1px solid var(--line);';
+      const color = none ? '#b91c1c' : 'var(--ink)';
+      const darkBg = none ? '' : '';
+      return `
+        <div class="rounded-xl px-2 py-2 text-center" style="${bg}">
+          <div class="flex items-center justify-center gap-1 mb-0.5">
+            <i data-lucide="${icon}" class="w-3 h-3" style="color:${none?'#dc2626':'var(--muted)'}"></i>
+            <span class="text-[9.5px] uppercase tracking-wider font-bold" style="color:${none?'#dc2626':'var(--muted)'}">${label}</span>
+          </div>
+          <div class="text-[11px] leading-tight" style="color:${color}; font-weight:${none?'700':'500'};">
+            ${none ? '✕ None' : val}
+          </div>
+        </div>
+      `;
+    };
+    const ruleWarn = /⚠|Strictest|Carry-on only/i.test(b.rule || '');
+    return `
+      <div class="border-t line pt-2.5 mb-2.5">
+        <div class="text-[9.5px] uppercase tracking-wider muted font-bold mb-1.5">Baggage</div>
+        <div class="grid grid-cols-3 gap-1.5">
+          ${cell('Personal', b.personal, 'briefcase')}
+          ${cell('Carry-on', b.carryOn, 'backpack')}
+          ${cell('Checked', b.checked, 'luggage')}
+        </div>
+        ${b.rule ? `<div class="text-[11px] mt-1.5 px-2 py-1 rounded-lg" style="${ruleWarn?'background:#fef3c7; color:#b45309; font-weight:600;':'color:var(--muted); font-style:italic;'}">${b.rule}</div>` : ''}
+      </div>
+    `;
+  }
 
   const car = BOOKINGS.car;
   const carCard = `
@@ -1147,8 +1220,28 @@ function renderBookings() {
     </div>
   `;
 
+  const overviewCard = `
+    <div class="card p-4 fade-in" style="background: linear-gradient(135deg, #6366f108, #ec489908); border: 1px solid var(--line);">
+      <div class="flex items-start gap-3">
+        <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg,#6366f120,#ec489920);">
+          <i data-lucide="luggage" class="w-4 h-4" style="color:#6366f1"></i>
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-sm mb-1">Baggage at a glance</div>
+          <div class="text-[12.5px] leading-relaxed">
+            Only <b>Asiana OZ333</b> and <b>China Eastern MU5164 / MU779</b> include a checked bag (23 kg each). The rest are cabin-only.
+          </div>
+          <div class="text-[12px] leading-relaxed mt-1.5 px-2 py-1.5 rounded-lg" style="background:#fef3c7; color:#b45309; font-weight:600;">
+            ⚠ <b>HK Express UO626</b> is the strictest — personal item only, <b>7 kg total</b>. Pack accordingly for the HKG→ICN leg.
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
   return `
     <div class="space-y-4">
+      ${overviewCard}
       <div class="flex items-center gap-2">
         <i data-lucide="plane" class="w-4 h-4 muted"></i>
         <div class="text-[11px] uppercase tracking-wider muted font-bold">Flights · ${BOOKINGS.flights.length} segments</div>
