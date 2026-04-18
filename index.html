@@ -189,7 +189,7 @@
 /* =========================================================================
    DATA — dates, cities, phrases, etc.
    ========================================================================= */
-const TODAY = new Date('2026-04-17T00:00:00');
+const TODAY = new Date('2026-04-18T00:00:00');
 const TRIP_START = new Date('2026-04-16T00:00:00');
 
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
@@ -491,40 +491,6 @@ const BINGO = {
 };
 
 /* =========================================================================
-   JOURNAL PROMPTS — one per day
-   ========================================================================= */
-const JOURNAL_PROMPTS = [
-  'What surprised you today?',
-  'A moment when you felt completely present?',
-  'Something you saw that you couldn\'t have described in advance.',
-  'Who did you talk to today, even briefly?',
-  'What smelled like this city?',
-  'A small inconvenience that turned into a good story.',
-  'If today had a single image, what is it?',
-  'Food you\'d recreate at home if you could.',
-  'Something you misunderstood and how it resolved.',
-  'A sound you\'ll remember.',
-  'What is this trip teaching you about how you like to travel?',
-  'What\'s one thing you\'d skip next time, and why?',
-  'A person you wish you\'d talked to more.',
-  'A sentence of conversation you overheard.',
-  'When did time disappear today?',
-  'What is homesickness for, if anything?',
-  'What\'s a place you haven\'t gone yet but want to?',
-  'A photo you didn\'t take but wish you had.',
-  'What would make tomorrow 10% better?',
-  'What will you miss about this leg when you leave?',
-  'What\'s been different from your expectations?',
-  'A kindness received today.',
-  'A decision you made quickly that worked out.',
-  'Who are you, traveling alone vs. home?',
-  'What did you eat standing up today?',
-  'The best thing you bought that cost under €5.',
-  'Write one sentence about tomorrow that you\'ll test against reality.',
-  'The view you\'d pin on a postcard.',
-];
-
-/* =========================================================================
    EMERGENCY
    ========================================================================= */
 const EMERGENCY = {
@@ -664,12 +630,10 @@ let state = {
   chat: [],
   chatLoading: false,
   bingo: Object.fromEntries(Object.keys(BINGO).map(k => [k, new Set()])),
-  journal: {},          // date string -> text
-  journalDay: 0,        // index into JOURNAL_PROMPTS
-  flipped: new Set(),   // phrase card keys
+  flipped: new Set(),
   phraseLang: 'japanese',
-  emergency: { blood: '', allergies: '', contact: '' },
-  convertInput: {},     // per city input
+  emergency: { contact: '' },
+  convertInput: {},
 };
 
 const TABS = [
@@ -683,7 +647,6 @@ const TABS = [
   { id: 'emergency', label: 'Emergency',   icon: 'shield-alert' },
   { id: 'time',      label: 'Time',        icon: 'clock' },
   { id: 'weather',   label: 'Weather',     icon: 'cloud-sun' },
-  { id: 'journal',   label: 'Journal',     icon: 'pen-line' },
   { id: 'guide',     label: 'Ask Guide',   icon: 'sparkles' },
 ];
 
@@ -954,12 +917,9 @@ function renderBingo() {
 function renderEmergency() {
   return `
   <div class="card p-4">
-    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-2">Your info</div>
-    <div class="grid grid-cols-1 gap-2 mb-4">
-      <input id="eBlood" placeholder="Blood type" value="${state.emergency.blood}" class="px-3 py-2 rounded-xl border line text-sm" />
-      <input id="eAllergies" placeholder="Allergies / meds" value="${state.emergency.allergies}" class="px-3 py-2 rounded-xl border line text-sm" />
-      <input id="eContact" placeholder="Emergency contact (name + phone)" value="${state.emergency.contact}" class="px-3 py-2 rounded-xl border line text-sm" />
-    </div>
+    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-2">Emergency contact</div>
+    <input id="eContact" placeholder="Name + phone for first responders to call" value="${state.emergency.contact}" class="w-full px-3 py-2 rounded-xl border line text-sm" />
+    <p class="text-[11px] muted mt-2 leading-relaxed">Kept deliberately minimal — no medical data stored here. Carry a physical card or wallet ICE note for blood type, meds, and allergies.</p>
   </div>
   ${ITINERARY.map(l => {
     const e = EMERGENCY[l.id];
@@ -995,32 +955,83 @@ function renderEmergency() {
 }
 
 function renderTime() {
-  const cities = [
-    { name: 'Stockholm',  tz: 'Europe/Stockholm',  flag: '🇸🇪' },
+  const now = new Date();
+  const HELSINKI = { name: 'Helsinki', tz: 'Europe/Helsinki', flag: '🇫🇮', accent: '#3b82f6' };
+  const PRAGUE   = { name: 'Prague',   tz: 'Europe/Prague',   flag: '🇨🇿', accent: '#8b5cf6' };
+  const benchmarks = [HELSINKI, PRAGUE];
+  const destinations = [
     { name: 'Osaka',      tz: 'Asia/Tokyo',         flag: '🇯🇵' },
     { name: 'Hong Kong',  tz: 'Asia/Hong_Kong',     flag: '🇭🇰' },
     { name: 'Seoul',      tz: 'Asia/Seoul',         flag: '🇰🇷' },
     { name: 'Beijing',    tz: 'Asia/Shanghai',      flag: '🇨🇳' },
     { name: 'Auckland',   tz: 'Pacific/Auckland',   flag: '🇳🇿' },
   ];
-  const now = new Date();
+
+  function tzOffsetMinutes(tz) {
+    // Compute tz offset from UTC in minutes by comparing localized ISO parts.
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(now).reduce((a, p) => (a[p.type] = p.value, a), {});
+    const local = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour % 24, +parts.minute, +parts.second);
+    return Math.round((local - now.getTime()) / 60000);
+  }
+  function fmtDelta(minutes) {
+    const sign = minutes >= 0 ? '+' : '−';
+    const abs = Math.abs(minutes);
+    const h = Math.floor(abs / 60);
+    const m = abs % 60;
+    return `${sign}${h}${m ? ':' + String(m).padStart(2,'0') : ''}h`;
+  }
+  function timeFor(tz) { return now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: tz, hour12: false }); }
+  function dayFor(tz)  { return now.toLocaleDateString('en-US', { weekday: 'short', timeZone: tz }); }
+
+  const helOff = tzOffsetMinutes(HELSINKI.tz);
+  const prgOff = tzOffsetMinutes(PRAGUE.tz);
+
   return `
   <div class="card p-4">
-    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-3">Now, around the world</div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      ${cities.map(c => {
-        const t = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: c.tz, hour12: false });
-        const d = now.toLocaleDateString('en-US', { weekday: 'short', timeZone: c.tz });
+    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-3">Benchmarks · home reference clocks</div>
+    <div class="grid grid-cols-2 gap-3">
+      ${benchmarks.map(c => `
+        <div class="text-center rounded-xl p-3" style="background: linear-gradient(135deg, ${c.accent}14, ${c.accent}06); border: 1px solid ${c.accent}35;">
+          <div class="flex items-center justify-center gap-1.5">
+            <span class="text-lg">${c.flag}</span>
+            <span class="text-[10px] uppercase tracking-wider font-bold" style="color:${c.accent};">Benchmark</span>
+          </div>
+          <div class="font-display text-2xl font-bold tabular-nums mt-1">${timeFor(c.tz)}</div>
+          <div class="text-[11px] muted">${c.name} · ${dayFor(c.tz)}</div>
+        </div>
+      `).join('')}
+    </div>
+    <p class="text-[11px] muted text-center mt-2">Delta between them: ${fmtDelta(prgOff - helOff)} (Prague vs Helsinki)</p>
+  </div>
+
+  <div class="card p-4">
+    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-3">Destinations · delta from both benchmarks</div>
+    <div class="space-y-2">
+      ${destinations.map(c => {
+        const off = tzOffsetMinutes(c.tz);
+        const dHel = fmtDelta(off - helOff);
+        const dPrg = fmtDelta(off - prgOff);
         return `
-          <div class="text-center rounded-xl p-3 border line">
-            <div class="text-lg">${c.flag}</div>
-            <div class="font-display text-xl font-bold tabular-nums mt-1">${t}</div>
-            <div class="text-[11px] muted">${c.name} · ${d}</div>
+          <div class="flex items-center gap-3 rounded-xl p-3 border line">
+            <span class="text-xl">${c.flag}</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2">
+                <span class="font-display text-xl font-bold tabular-nums">${timeFor(c.tz)}</span>
+                <span class="text-[11px] muted truncate">${c.name} · ${dayFor(c.tz)}</span>
+              </div>
+              <div class="flex gap-1.5 mt-1 flex-wrap">
+                <span class="chip" style="color:${HELSINKI.accent}; border-color:${HELSINKI.accent}40; font-weight:600;">${HELSINKI.flag} Helsinki ${dHel}</span>
+                <span class="chip" style="color:${PRAGUE.accent}; border-color:${PRAGUE.accent}40; font-weight:600;">${PRAGUE.flag} Prague ${dPrg}</span>
+              </div>
+            </div>
           </div>
         `;
       }).join('')}
     </div>
-    <p class="text-[11px] muted text-center mt-3">Updates each time you open this tab.</p>
+    <p class="text-[11px] muted text-center mt-3">Benchmarks: Helsinki (Europe/Helsinki) + Prague (Europe/Prague). Updates each time you open this tab.</p>
   </div>
   `;
 }
@@ -1040,49 +1051,6 @@ function renderWeather() {
     </div>
     `;
   }).join('');
-}
-
-function renderJournal() {
-  const dayIdx = Math.max(0, daysBetween(ITINERARY[0].arrive, TODAY));
-  const dayCount = daysBetween(ITINERARY[0].arrive, ITINERARY[ITINERARY.length-1].depart);
-  const prompt = JOURNAL_PROMPTS[state.journalDay % JOURNAL_PROMPTS.length];
-  const text = state.journal[state.journalDay] || '';
-  return `
-  <div class="card p-4">
-    <div class="flex items-center justify-between mb-3">
-      <div>
-        <div class="text-[11px] uppercase tracking-wider muted font-bold">Day ${state.journalDay+1} of ~${dayCount}</div>
-        <div class="font-display text-lg font-bold mt-0.5">Today's prompt</div>
-      </div>
-      <div class="flex gap-1">
-        <button id="jPrev" class="w-9 h-9 rounded-full border line hover:scale-105 transition"><i data-lucide="chevron-left" class="w-4 h-4 mx-auto"></i></button>
-        <button id="jNext" class="w-9 h-9 rounded-full border line hover:scale-105 transition"><i data-lucide="chevron-right" class="w-4 h-4 mx-auto"></i></button>
-      </div>
-    </div>
-    <div class="rounded-xl p-3 mb-3 text-[14px] italic" style="background: linear-gradient(135deg, #f9731615, #ec489915); border: 1px dashed var(--line);">
-      "${prompt}"
-    </div>
-    <textarea id="jText" rows="8" placeholder="Write freely…" class="w-full rounded-xl border line p-3 text-sm leading-relaxed resize-y">${text}</textarea>
-    <div class="flex justify-between items-center mt-2 text-[11px] muted">
-      <span>${text.length} characters</span>
-      <span>In-session only · copy out before closing</span>
-    </div>
-  </div>
-  <div class="card p-4">
-    <div class="text-[11px] uppercase tracking-wider muted font-bold mb-2">All entries</div>
-    ${Object.keys(state.journal).length === 0
-      ? '<p class="text-[13px] muted italic">Nothing yet. Write a line — it\'ll appear here.</p>'
-      : Object.entries(state.journal).map(([k,v]) => `
-        <div class="border-t line pt-2 mt-2 text-[13px]">
-          <div class="flex justify-between text-[11px] muted font-semibold uppercase tracking-wider mb-1">
-            <span>Day ${parseInt(k)+1}</span>
-            <button data-jump="${k}" class="underline hover:no-underline">jump</button>
-          </div>
-          <div class="line-clamp-3">${escapeHtml(v).slice(0,240)}${v.length>240?'…':''}</div>
-        </div>
-      `).join('')}
-  </div>
-  `;
 }
 
 function renderBookings() {
@@ -1321,7 +1289,6 @@ function renderContent() {
   else if (tab === 'emergency') html = renderEmergency();
   else if (tab === 'time')      html = renderTime();
   else if (tab === 'weather')   html = renderWeather();
-  else if (tab === 'journal')   html = renderJournal();
   else if (tab === 'guide')     html = renderGuide();
   else if (tab === 'bookings')  html = renderBookings();
   c.innerHTML = html;
@@ -1368,20 +1335,9 @@ function bindContent() {
     state.bingo[city] = new Set(); renderContent();
   });
 
-  // Emergency inputs
-  ['eBlood','eAllergies','eContact'].forEach(id => {
-    const el = $('#'+id);
-    if (el) el.addEventListener('input', e => {
-      state.emergency[id.substring(1).toLowerCase()] = e.target.value;
-    });
-  });
-
-  // Journal
-  const jPrev = $('#jPrev'), jNext = $('#jNext'), jText = $('#jText');
-  if (jPrev) jPrev.addEventListener('click', () => { if (state.journalDay > 0) { state.journalDay--; renderContent(); }});
-  if (jNext) jNext.addEventListener('click', () => { state.journalDay++; renderContent(); });
-  if (jText) jText.addEventListener('input', e => { state.journal[state.journalDay] = e.target.value; });
-  $$('#content [data-jump]').forEach(b => b.addEventListener('click', () => { state.journalDay = parseInt(b.dataset.jump); renderContent(); }));
+  // Emergency contact
+  const eContact = $('#eContact');
+  if (eContact) eContact.addEventListener('input', e => { state.emergency.contact = e.target.value; });
 
   // Chat
   const send = $('#chatSend'), input = $('#chatInput');
