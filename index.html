@@ -189,7 +189,9 @@
 /* =========================================================================
    DATA — dates, cities, phrases, etc.
    ========================================================================= */
-const TODAY = new Date('2026-04-18T00:00:00');
+let TODAY;
+function refreshToday() { const d = new Date(); d.setHours(0,0,0,0); TODAY = d; }
+refreshToday();
 const TRIP_START = new Date('2026-04-16T00:00:00');
 
 function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
@@ -1465,6 +1467,7 @@ function bindDarkMode() {
    BOOT
    ========================================================================= */
 function render() {
+  refreshToday();
   renderTimeline();
   renderTabs();
   renderContent();
@@ -1478,7 +1481,7 @@ function init() {
   render();
 
   // Timeline refresh every minute in case day ticks over
-  setInterval(renderTimeline, 60000);
+  setInterval(() => { refreshToday(); renderTimeline(); }, 60000);
   // Refresh clocks on Time tab every 30s
   setInterval(() => { if (state.activeTab === 'time') renderContent(); }, 30000);
 }
